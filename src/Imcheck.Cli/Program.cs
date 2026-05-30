@@ -31,7 +31,7 @@ static async Task<int> RunAsync(string[] args)
                 options.ImagePath!,
                 new MetamorfozeWhiteSheetAnalysisOptions
                 {
-                    SampleSize = options.SampleSizeWasProvided ? options.SampleSize : new MetamorfozeWhiteSheetAnalysisOptions().SampleSize,
+                    SampleSize = options.SampleSizeWasProvided ? options.SampleSize : null,
                     ColorSpace = options.ColorSpace,
                     QualityLevel = options.QualityLevel,
                     ImagePlaneSize = options.ImagePlaneSize
@@ -138,7 +138,7 @@ Imcheck.Cli - Imcheck-style target measurement
 Usage:
   Imcheck.Cli <image-path> [--target q13|qa62] [--points <points.csv>] [--out <results.csv>] [--imcheck-out <results.xls>] [--sample-size <odd-pixels>] [--sampling <pix-per-inch>]
   Imcheck.Cli --generate qa62 [--out <target.png>] [--dpi <pixels-per-inch>]
-  Imcheck.Cli --analyze white-sheet <image-path> [--out <results.csv>] [--sample-size <odd-pixels>] [--color-space srgb|adobe-rgb|ecirgbv2] [--quality full|light|extra-light] [--image-size a3|a2|a1|a0]
+  Imcheck.Cli --analyze white-sheet <image-path> [--out <results.csv>] [--sample-size <odd-pixels-min-33>] [--color-space srgb|adobe-rgb|ecirgbv2] [--quality full|light|extra-light] [--image-size a3|a2|a1|a0]
 
 Examples:
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif"
@@ -147,6 +147,10 @@ Examples:
   dotnet run --project src\Imcheck.Cli -- --target qa62 "C:\path\QA-62.jpg" --out "C:\path\qa62.csv" --imcheck-out "C:\path\qa62.xls"
   dotnet run --project src\Imcheck.Cli -- --generate qa62 --out "C:\path\QA62_Recreation_600dpi.png" --dpi 600
   dotnet run --project src\Imcheck.Cli -- --analyze white-sheet "C:\path\white-sheet.tif" --out "C:\path\white-sheet.csv" --color-space ecirgbv2 --quality full --image-size a3
+
+White-sheet analysis:
+  Uses five square areas from a 3x3 grid: four corner cells and the center cell.
+  Default area size is 33% of the smaller grid-cell dimension, with a 33x33 pixel minimum.
 
 Points CSV:
   Patch,X,Y
@@ -353,9 +357,9 @@ internal sealed record CliOptions(
                 throw new ArgumentException("--sampling is only supported when measuring targets.");
             }
 
-            if (sampleSize <= 0 || sampleSize % 2 == 0)
+            if (sampleSize < 33 || sampleSize % 2 == 0)
             {
-                throw new ArgumentException("--sample-size must be a positive odd integer.");
+                throw new ArgumentException("--sample-size must be an odd integer of at least 33 for white-sheet analysis.");
             }
 
             return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);

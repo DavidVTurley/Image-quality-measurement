@@ -14,11 +14,70 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
             var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(path);
 
             Assert.Equal(5, result.Samples.Count);
+            Assert.Equal(33, result.SampleSize);
+            Assert.All(result.Samples, sample => Assert.Equal(33, sample.SampleSize));
             Assert.True(result.IlluminationPass);
             Assert.True(result.WhiteBalancePass);
             Assert.Equal(0, result.MaxDeltaLStar, precision: 4);
             Assert.Equal(0, result.MaxDeltaEab, precision: 4);
             Assert.Contains("Illumination,MaxDeltaLStar", result.ToCsv());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void AutoSampleSizeUsesThirtyThreePercentOfGridCellWithMinimum()
+    {
+        var path = CreateTempImage(width: 300, height: 300, (_, _) => new Vec3b(242, 242, 242));
+        try
+        {
+            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(path);
+
+            Assert.Equal(33, result.SampleSize);
+            Assert.Equal(("TopLeft", 49.5, 49.5, 33), SampleShape(result.Samples[0]));
+            Assert.Equal(("TopRight", 249.5, 49.5, 33), SampleShape(result.Samples[1]));
+            Assert.Equal(("Center", 149.5, 149.5, 33), SampleShape(result.Samples[2]));
+            Assert.Equal(("BottomLeft", 49.5, 249.5, 33), SampleShape(result.Samples[3]));
+            Assert.Equal(("BottomRight", 249.5, 249.5, 33), SampleShape(result.Samples[4]));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ExplicitSampleSizeOverridesAutoSize()
+    {
+        var path = CreateTempImage(width: 300, height: 300, (_, _) => new Vec3b(242, 242, 242));
+        try
+        {
+            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(
+                path,
+                new MetamorfozeWhiteSheetAnalysisOptions { SampleSize = 51 });
+
+            Assert.Equal(51, result.SampleSize);
+            Assert.All(result.Samples, sample => Assert.Equal(51, sample.SampleSize));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ExplicitSampleSizeBelowMinimumFails()
+    {
+        var path = CreateTempImage(width: 300, height: 300, (_, _) => new Vec3b(242, 242, 242));
+        try
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new MetamorfozeWhiteSheetAnalyzer().Analyze(
+                    path,
+                    new MetamorfozeWhiteSheetAnalysisOptions { SampleSize = 31 }));
         }
         finally
         {
@@ -104,5 +163,10 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
 
         Cv2.ImWrite(path, image);
         return path;
+    }
+
+    private static (string Name, double CenterX, double CenterY, int SampleSize) SampleShape(WhiteSheetSampleMeasurement sample)
+    {
+        return (sample.Name, sample.SampleCenterX, sample.SampleCenterY, sample.SampleSize);
     }
 }

@@ -6,13 +6,16 @@ namespace Imcheck.Measurement.Metamorfoze;
 
 public sealed class MetamorfozeWhiteSheetAnalyzer
 {
+    private const int MinimumSampleSize = 33;
+    private const double DefaultCellCoverage = 0.33;
+
     private static readonly WhiteSheetSamplePoint[] DefaultSamplePoints =
     [
-        new("TopLeft", 0.1, 0.1),
-        new("TopRight", 0.9, 0.1),
-        new("Center", 0.5, 0.5),
-        new("BottomLeft", 0.1, 0.9),
-        new("BottomRight", 0.9, 0.9),
+        new("TopLeft", 0, 0),
+        new("TopRight", 2, 0),
+        new("Center", 1, 1),
+        new("BottomLeft", 0, 2),
+        new("BottomRight", 2, 2),
     ];
 
     public MetamorfozeWhiteSheetAnalysisResult Analyze(string imagePath, MetamorfozeWhiteSheetAnalysisOptions? options = null)
@@ -41,8 +44,9 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
             throw new NotSupportedException($"Unsupported channel count: {image.Channels()}.");
         }
 
+        var sampleSize = ResolveSampleSize(image.Width, image.Height, options);
         var samples = DefaultSamplePoints
-            .Select(point => MeasurePoint(image, point, options))
+            .Select(point => MeasurePoint(image, point, sampleSize, options))
             .ToArray();
 
         var maxDeltaL = 0.0;
@@ -67,7 +71,7 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
             options.ColorSpace,
             options.QualityLevel,
             options.ImagePlaneSize,
-            options.SampleSize,
+            sampleSize,
             samples,
             maxDeltaL,
             maxDeltaEab,
@@ -75,11 +79,13 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
             whiteBalanceTolerance);
     }
 
-    private static WhiteSheetSampleMeasurement MeasurePoint(Mat image, WhiteSheetSamplePoint point, MetamorfozeWhiteSheetAnalysisOptions options)
+    private static WhiteSheetSampleMeasurement MeasurePoint(Mat image, WhiteSheetSamplePoint point, int sampleSize, MetamorfozeWhiteSheetAnalysisOptions options)
     {
-        var centerX = point.NormalizedX * (image.Width - 1);
-        var centerY = point.NormalizedY * (image.Height - 1);
-        var rect = SampleRect(image.Width, image.Height, options.SampleSize, centerX, centerY);
+        var cellWidth = image.Width / 3.0;
+        var cellHeight = image.Height / 3.0;
+        var centerX = (point.Column + 0.5) * cellWidth - 0.5;
+        var centerY = (point.Row + 0.5) * cellHeight - 0.5;
+        var rect = SampleRect(image.Width, image.Height, sampleSize, centerX, centerY);
         using var roi = new Mat(image, rect);
 
         var pixels = rect.Width * rect.Height;
@@ -158,10 +164,42 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
 
     private static void ValidateOptions(MetamorfozeWhiteSheetAnalysisOptions options)
     {
-        if (options.SampleSize <= 0 || options.SampleSize % 2 == 0)
+        if (options.SampleSize is null)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.SampleSize), "Sample size must be a positive odd number.");
+            return;
         }
+
+        if (options.SampleSize < MinimumSampleSize || options.SampleSize % 2 == 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options.SampleSize), $"Sample size must be an odd number of at least {MinimumSampleSize} pixels.");
+        }
+    }
+
+    private static int ResolveSampleSize(int imageWidth, int imageHeight, MetamorfozeWhiteSheetAnalysisOptions options)
+    {
+        var cellWidth = imageWidth / 3.0;
+        var cellHeight = imageHeight / 3.0;
+        var sampleSize = options.SampleSize ?? AutoSampleSize(cellWidth, cellHeight);
+
+        if (sampleSize > cellWidth || sampleSize > cellHeight)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(options.SampleSize),
+                $"Sample size {sampleSize} does not fit inside each 3x3 grid cell ({cellWidth:0.##}x{cellHeight:0.##} pixels).");
+        }
+
+        return sampleSize;
+    }
+
+    private static int AutoSampleSize(double cellWidth, double cellHeight)
+    {
+        var sampleSize = (int)Math.Round(Math.Min(cellWidth, cellHeight) * DefaultCellCoverage);
+        if (sampleSize % 2 == 0)
+        {
+            sampleSize++;
+        }
+
+        return Math.Max(MinimumSampleSize, sampleSize);
     }
 
     private static int Clamp(int value, int min, int max)
@@ -169,12 +207,12 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
         return Math.Min(Math.Max(value, min), max);
     }
 
-    private sealed record WhiteSheetSamplePoint(string Name, double NormalizedX, double NormalizedY);
+    private sealed record WhiteSheetSamplePoint(string Name, int Column, int Row);
 }
 
 public sealed record MetamorfozeWhiteSheetAnalysisOptions
 {
-    public int SampleSize { get; init; } = 11;
+    public int? SampleSize { get; init; }
 
     public RgbColorSpace ColorSpace { get; init; } = RgbColorSpace.SRgb;
 
