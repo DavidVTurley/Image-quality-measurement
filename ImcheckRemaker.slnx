@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Imcheck.App/Imcheck.App.csproj" />
+    <Project Path="src/Imcheck.Measurement/Imcheck.Measurement.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Imcheck.Measurement.Tests/Imcheck.Measurement.Tests.csproj" />
+  </Folder>
+</Solution>
