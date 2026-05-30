@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kodak Q13 Grayscale Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg:#0f0f0f; --panel:#181818; --border:#2a2a2a;
+    --accent:#c8a96e; --text:#e8e4dc; --muted:#666;
+    --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:32px;}
+  header{display:flex;align-items:baseline;gap:16px;margin-bottom:40px;border-bottom:1px solid var(--border);padding-bottom:20px;flex-wrap:wrap;}
+  h1{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);}
+  .subtitle{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em;}
+  .icc-badge{display:inline-block;background:#1e2a1e;border:1px solid #3a5a3a;color:#7bc87b;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;letter-spacing:.05em;}
+  .main{display:grid;grid-template-columns:1fr 290px;gap:32px;align-items:start;}
+  .scale-wrapper{background:var(--panel);border:1px solid var(--border);padding:24px;}
+  .scale-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px;}
+  #scaleCanvas{display:block;width:100%;image-rendering:pixelated;border:1px solid #333;}
+  #patchLabels{display:flex;margin-top:4px;}
+  .patch-label{flex:1;text-align:center;font-family:var(--mono);font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;}
+  .sidebar{display:flex;flex-direction:column;gap:20px;}
+  .card{background:var(--panel);border:1px solid var(--border);padding:20px;}
+  .card-title{font-family:var(--mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:14px;}
+  .spec-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;}
+  .spec-row:last-child{border-bottom:none;}
+  .spec-key{color:var(--muted);font-family:var(--mono);}
+  .spec-val{color:var(--text);font-family:var(--mono);font-weight:500;}
+  .patch-table{width:100%;border-collapse:collapse;}
+  .patch-table th{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:0 4px 8px 4px;text-align:right;border-bottom:1px solid var(--border);}
+  .patch-table th:first-child{text-align:left;}
+  .patch-table td{font-family:var(--mono);font-size:10px;padding:3px 4px;text-align:right;color:var(--text);border-bottom:1px solid #1e1e1e;}
+  .patch-table td:first-child{text-align:left;color:var(--muted);}
+  .swatch{display:inline-block;width:12px;height:12px;border:1px solid #333;vertical-align:middle;margin-right:3px;border-radius:1px;}
+  .btn{width:100%;padding:12px;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .15s,color .15s;}
+  .btn:hover{background:var(--accent);color:#000;}
+  .btn:active{opacity:.8;}
+  .btn:disabled{opacity:.3;cursor:not-allowed;}
+  .btn-secondary{border-color:#444;color:#666;margin-top:8px;}
+  .btn-secondary:hover{background:#444;color:#fff;}
+  .status{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;min-height:16px;padding:4px 0;}
+  .status.ok{color:#6dbb8a;} .status.err{color:#e07070;}
+  .flags{background:#1a1510;border:1px solid #3a2e1a;padding:14px;font-family:var(--mono);font-size:10px;line-height:1.9;color:#c8a96e;}
+  .flag-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;color:#e0b87a;}
+  .flag-item{color:#b89a5a;} .flag-item::before{content:'⚑ ';color:#c8a96e;}
+  .dpi-group{display:flex;gap:8px;margin-top:8px;}
+  .dpi-btn{flex:1;padding:7px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .12s;text-align:center;}
+  .dpi-btn.active{border-color:var(--accent);color:var(--accent);}
+  .dpi-btn:hover{border-color:#555;color:var(--text);}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kodak Q13 Grayscale Generator</h1>
+  <span class="subtitle">D=0.05→1.95 · ΔD=0.10 · 20 patches · D50/2°</span>
+  <span class="icc-badge">eciRGB v2 embedded</span>
+</header>
+<div class="main">
+  <div class="scale-wrapper">
+    <div class="scale-label">Preview — Kodak Q13 proportions (203 × 30 mm)</div>
+    <canvas id="scaleCanvas"></canvas>
+    <div id="patchLabels"></div>
+  </div>
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-title">Specifications</div>
+      <div class="spec-row"><span class="spec-key">Patches</span><span class="spec-val">20</span></div>
+      <div class="spec-row"><span class="spec-key">Density range</span><span class="spec-val">0.05 → 1.95</span></div>
+      <div class="spec-row"><span class="spec-key">Step size</span><span class="spec-val">ΔD = 0.10</span></div>
+      <div class="spec-row"><span class="spec-key">L* range</span><span class="spec-val">~95.6 → ~10.0</span></div>
+      <div class="spec-row"><span class="spec-key">Illuminant</span><span class="spec-val">D50</span></div>
+      <div class="spec-row"><span class="spec-key">Observer</span><span class="spec-val">2°</span></div>
+      <div class="spec-row"><span class="spec-key">ICC profile</span><span class="spec-val">eciRGB v2</span></div>
+      <div class="spec-row"><span class="spec-key">TRC</span><span class="spec-val">L* curve</span></div>
+      <div class="spec-row"><span class="spec-key">Strip size</span><span class="spec-val">203 × 30 mm</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Export Resolution</div>
+      <div class="dpi-group" id="dpiGroup">
+        <div class="dpi-btn active" data-dpi="150">150 dpi</div>
+        <div class="dpi-btn" data-dpi="300">300 dpi</div>
+        <div class="dpi-btn" data-dpi="600">600 dpi</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Export</div>
+      <button class="btn" id="saveTif">Save as TIFF</button>
+      <div class="status" id="status"></div>
+      <button class="btn btn-secondary" id="savePng">Save as PNG (sRGB preview)</button>
+    </div>
+    <div class="flags">
+      <div class="flag-title">⚑ Notes &amp; Flags</div>
+      <div class="flag-item">Patch values derived from optical density: R = 10^(−D), Y = R, L* from CIE 1976.</div>
+      <div class="flag-item">This matches the theoretical Q13 density model. Real printed cards may deviate due to ink dot gain, paper OBA, surface finish.</div>
+      <div class="flag-item">L* steps are NOT equal — density spacing is logarithmic, so shadows crowd together visually.</div>
+      <div class="flag-item">eciRGB v2 encoding: pixel = round(L*/100 × 255). ICC profile embedded in TIFF tag 34675.</div>
+      <div class="flag-item">PNG export tone-maps to sRGB gamma for correct display — no ICC profile embedded.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Patch Reference Values</div>
+      <table class="patch-table">
+        <thead><tr><th>Label</th><th>D</th><th>R%</th><th>L*</th><th>px</th></tr></thead>
+        <tbody id="patchTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Q13 patch data ────────────────────────────────────────────────────────────
+// D = 0.05, 0.15 ... 1.95  (confirmed: Imatest docs, reflectance 89.1% to 1.1%)
+// R = 10^(-D),  Y = R (neutral patch, no chromatic adaptation needed)
+// L* = 116*(Y)^(1/3) - 16  for Y > 0.008856
+// eciRGB v2 pixel = round(L*/100 * 255)
+
+const PATCH_LABELS = {0:'A', 7:'M', 16:'B'};
+
+function densityToLstar(D) {
+  const R = Math.pow(10, -D);
+  const Y = R;
+  return Y > 0.008856
+    ? 116 * Math.pow(Y, 1/3) - 16
+    : 903.3 * Y;
+}
+
+const patches = [];
+for (let i = 0; i < 20; i++) {
+  const D = 0.05 + i * 0.10;
+  const R = Math.pow(10, -D);
+  const L = densityToLstar(D);
+  const px = Math.round((L / 100) * 255);
+  const label = PATCH_LABELS[i] !== undefined ? PATCH_LABELS[i] : String(i);
+  patches.push({ i, label, D, R, L, px });
+}
+
+// ── Canvas preview ────────────────────────────────────────────────────────────
+// eciRGB v2 -> linear -> sRGB for display
+function eciToLinear(cprime) {
+  const thresh = 9.033 * 0.008856;
+  return cprime < thresh ? cprime / 9.033 : Math.pow((cprime + 0.16) / 1.16, 3);
+}
+function linearToSRGB(c) {
+  return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1/2.4) - 0.055;
+}
+
+const CANVAS_W = Math.round(203 * 4), CANVAS_H = Math.round(30 * 4);
+const canvas = document.getElementById('scaleCanvas');
+canvas.width = CANVAS_W; canvas.height = CANVAS_H;
+const ctx = canvas.getContext('2d');
+
+(function drawScale() {
+  const pw = CANVAS_W / 20;
+  for (let i = 0; i < 20; i++) {
+    const cprime = patches[i].px / 255;
+    const lin = eciToLinear(cprime);
+    const s = Math.round(Math.max(0,Math.min(1, linearToSRGB(lin))) * 255);
+    ctx.fillStyle = `rgb(${s},${s},${s})`;
+    ctx.fillRect(Math.round(i*pw), 0, Math.round(pw), CANVAS_H);
+  }
+})();
+
+// Labels
+const labelsDiv = document.getElementById('patchLabels');
+patches.forEach(({ label }) => {
+  const d = document.createElement('div');
+  d.className = 'patch-label'; d.textContent = label;
+  labelsDiv.appendChild(d);
+});
+
+// Patch table
+const tbody = document.getElementById('patchTableBody');
+patches.forEach(({ label, D, R, L, px }) => {
+  const v = px; const hex = v.toString(16).padStart(2,'0').toUpperCase();
+  const hexStr = `#${hex}${hex}${hex}`;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><span class="swatch" style="background:${hexStr}"></span>${label}</td>
+    <td>${D.toFixed(2)}</td><td>${(R*100).toFixed(1)}</td>
+    <td>${L.toFixed(1)}</td><td>${v}</td>`;
+  tbody.appendChild(tr);
+});
+
+// ── DPI selector ──────────────────────────────────────────────────────────────
+let selectedDpi = 150;
+document.getElementById('dpiGroup').addEventListener('click', e => {
+  const btn = e.target.closest('.dpi-btn'); if (!btn) return;
+  document.querySelectorAll('.dpi-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); selectedDpi = parseInt(btn.dataset.dpi);
+});
+
+// ── eciRGB v2 ICC profile (gray, L* TRC, D50) ─────────────────────────────────
+function buildEciRGBv2GrayProfile() {
+  const TRC_N = 256;
+  const trc = new Uint16Array(TRC_N);
+  const thresh = 9.033 * 0.008856;
+  for (let i = 0; i < TRC_N; i++) {
+    const cp = i / (TRC_N - 1);
+    let lin = cp < thresh ? cp / 9.033 : Math.pow((cp + 0.16) / 1.16, 3);
+    trc[i] = Math.round(Math.max(0, Math.min(1, lin)) * 65535);
+  }
+
+  function u32be(v, buf, o) {
+    buf[o]=(v>>>24)&0xFF; buf[o+1]=(v>>>16)&0xFF; buf[o+2]=(v>>>8)&0xFF; buf[o+3]=v&0xFF;
+  }
+  function s15f16bytes(v) {
+    const b = new Uint8Array(4); const dv = new DataView(b.buffer);
+    dv.setInt32(0, Math.round(v*65536), false); return b;
+  }
+  function str4(s, buf, o) { for(let i=0;i<4;i++) buf[o+i]=s.charCodeAt(i); }
+
+  const descStr = 'eciRGB v2 Gray (L* TRC, D50)';
+  const descBytes = new TextEncoder().encode(descStr);
+  const descTagLen = 4+4+4+descBytes.length+1;
+  const descTag = new Uint8Array(descTagLen + (4-(descTagLen%4))%4);
+  str4('desc',descTag,0); u32be(0,descTag,4); u32be(descBytes.length+1,descTag,8);
+  descTag.set(descBytes,12);
+
+  const cprtStr = 'ECI European Color Initiative. Built from published specification.';
+  const cprtBytes = new TextEncoder().encode(cprtStr);
+  const cprtTagLen = 4+4+cprtBytes.length+1;
+  const cprtTag = new Uint8Array(cprtTagLen + (4-(cprtTagLen%4))%4);
+  str4('text',cprtTag,0); u32be(0,cprtTag,4); cprtTag.set(cprtBytes,8);
+
+  const wtptTag = new Uint8Array(20);
+  str4('XYZ ',wtptTag,0); u32be(0,wtptTag,4);
+  wtptTag.set(s15f16bytes(0.96420),8);
+  wtptTag.set(s15f16bytes(1.00000),12);
+  wtptTag.set(s15f16bytes(0.82491),16);
+
+  const kTRCTagLen = 4+4+4+TRC_N*2;
+  const kTRCTag = new Uint8Array(kTRCTagLen);
+  str4('curv',kTRCTag,0); u32be(0,kTRCTag,4); u32be(TRC_N,kTRCTag,8);
+  for (let i=0;i<TRC_N;i++){kTRCTag[12+i*2]=(trc[i]>>8)&0xFF;kTRCTag[13+i*2]=trc[i]&0xFF;}
+
+  const tags = [
+    {sig:'desc',data:descTag},{sig:'cprt',data:cprtTag},
+    {sig:'wtpt',data:wtptTag},{sig:'kTRC',data:kTRCTag}
+  ];
+  const HEADER=128, TD=4+tags.length*12;
+  let dataOff = HEADER+TD;
+  const offsets = tags.map(t=>{const o=dataOff; dataOff+=t.data.length; return o;});
+  const profile = new Uint8Array(dataOff);
+
+  u32be(dataOff,profile,0);
+  str4('    ',profile,4); u32be(0x02100000,profile,8);
+  str4('mntr',profile,12); str4('GRAY',profile,16); str4('XYZ ',profile,20);
+  str4('acsp',profile,36);
+  profile.set(s15f16bytes(0.96420),68);
+  profile.set(s15f16bytes(1.00000),72);
+  profile.set(s15f16bytes(0.82491),76);
+
+  u32be(tags.length,profile,HEADER);
+  tags.forEach((t,i)=>{
+    const o=HEADER+4+i*12;
+    str4(t.sig,profile,o); u32be(offsets[i],profile,o+4); u32be(t.data.length,profile,o+8);
+  });
+  tags.forEach((t,i)=>profile.set(t.data,offsets[i]));
+  return profile;
+}
+
+const iccProfile = buildEciRGBv2GrayProfile();
+
+// ── Pixel builder ─────────────────────────────────────────────────────────────
+function buildPixels(dpi) {
+  const W = Math.round((203/25.4)*dpi), H = Math.round((30/25.4)*dpi);
+  const pw = W / 20;
+  const data = new Uint8Array(W*H);
+  for (let y=0;y<H;y++)
+    for (let p=0;p<20;p++) {
+      const x0=Math.round(p*pw), x1=(p<19)?Math.round((p+1)*pw):W;
+      data.fill(patches[p].px, y*W+x0, y*W+x1);
+    }
+  return {width:W, height:H, data};
+}
+
+// ── TIFF writer ───────────────────────────────────────────────────────────────
+function buildTiff(width, height, pixelData, dpi, icc) {
+  const N=13, HEADER=8, IFD=2+N*12+4;
+  const valStart = HEADER+IFD;
+  const xResOff=valStart, yResOff=valStart+8, iccOff=valStart+16;
+  const imageOff = valStart+16+icc.length + (4-(icc.length%4))%4;
+  const total = imageOff+pixelData.length;
+  const buf=new ArrayBuffer(total), view=new DataView(buf), u8=new Uint8Array(buf);
+  let o=0;
+  const W16=v=>{view.setUint16(o,v,false);o+=2;};
+  const W32=v=>{view.setUint32(o,v,false);o+=4;};
+  const W8=v=>view.setUint8(o++,v);
+  W8(0x4D);W8(0x4D);W16(42);W32(HEADER);
+  W16(N);
+  function entry(tag,type,count,value){
+    W16(tag);W16(type);W32(count);
+    type===3&&count===1?(W16(value),W16(0)):W32(value);
+  }
+  entry(256,4,1,width); entry(257,4,1,height); entry(258,3,1,8);
+  entry(259,3,1,1);     entry(262,3,1,1);      entry(273,4,1,imageOff);
+  entry(277,3,1,1);     entry(278,4,1,height);  entry(279,4,1,pixelData.length);
+  entry(282,5,1,xResOff); entry(283,5,1,yResOff); entry(296,3,1,2);
+  entry(34675,7,icc.length,iccOff);
+  W32(0);
+  view.setUint32(xResOff,dpi,false); view.setUint32(xResOff+4,1,false);
+  view.setUint32(yResOff,dpi,false); view.setUint32(yResOff+4,1,false);
+  u8.set(icc,iccOff);
+  u8.set(pixelData,imageOff);
+  return buf;
+}
+
+function setStatus(msg,cls){
+  const el=document.getElementById('status');
+  el.textContent=msg; el.className='status'+(cls?' '+cls:'');
+}
+
+document.getElementById('saveTif').addEventListener('click',()=>{
+  const btn=document.getElementById('saveTif'); btn.disabled=true;
+  setStatus('Building TIFF…');
+  setTimeout(()=>{
+    try {
+      const {width,height,data}=buildPixels(selectedDpi);
+      const tiffBuf=buildTiff(width,height,data,selectedDpi,iccProfile);
+      const blob=new Blob([tiffBuf],{type:'image/tiff'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url;
+      a.download=`kodak_q13_eciRGBv2_${selectedDpi}dpi.tif`;
+      a.click(); URL.revokeObjectURL(url);
+      setStatus(`Saved ${width}×${height}px @ ${selectedDpi}dpi · ICC:${iccProfile.length}B`,'ok');
+    } catch(e){setStatus('Error: '+e.message,'err');}
+    btn.disabled=false;
+  },50);
+});
+
+document.getElementById('savePng').addEventListener('click',()=>{
+  const {width,height,data}=buildPixels(selectedDpi);
+  const off=document.createElement('canvas'); off.width=width; off.height=height;
+  const c=off.getContext('2d'), img=c.createImageData(width,height);
+  for(let i=0;i<data.length;i++){
+    const cp=data[i]/255, thresh=9.033*0.008856;
+    const lin=cp<thresh?cp/9.033:Math.pow((cp+0.16)/1.16,3);
+    const s=lin<=0.0031308?12.92*lin:1.055*Math.pow(lin,1/2.4)-0.055;
+    const v=Math.round(Math.max(0,Math.min(1,s))*255);
+    img.data[i*4]=v;img.data[i*4+1]=v;img.data[i*4+2]=v;img.data[i*4+3]=255;
+  }
+  c.putImageData(img,0,0);
+  const a=document.createElement('a');
+  a.href=off.toDataURL('image/png');
+  a.download=`kodak_q13_sRGB_preview_${selectedDpi}dpi.png`;
+  a.click(); setStatus('PNG saved','ok');
+});
+</script>
+</body>
+</html>
