@@ -17,13 +17,15 @@
   h1{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);}
   .subtitle{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em;}
   .icc-badge{display:inline-block;background:#1e2a1e;border:1px solid #3a5a3a;color:#7bc87b;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;letter-spacing:.05em;}
-  .main{display:grid;grid-template-columns:1fr 290px;gap:32px;align-items:start;}
+  .main{display:flex;flex-direction:column;gap:24px;align-items:stretch;}
   .scale-wrapper{background:var(--panel);border:1px solid var(--border);padding:24px;}
   .scale-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px;}
-  #scaleCanvas{display:block;width:100%;image-rendering:pixelated;border:1px solid #333;}
-  #patchLabels{display:flex;margin-top:4px;}
+  .preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .preview-pane-title{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
+  .scale-canvas{display:block;width:100%;image-rendering:pixelated;border:1px solid #333;background:#050505;}
+  .patch-labels{display:flex;margin-top:4px;}
   .patch-label{flex:1;text-align:center;font-family:var(--mono);font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;}
-  .sidebar{display:flex;flex-direction:column;gap:20px;}
+  .sidebar{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;align-items:start;}
   .card{background:var(--panel);border:1px solid var(--border);padding:20px;}
   .card-title{font-family:var(--mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:14px;}
   .spec-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;}
@@ -51,6 +53,21 @@
   .dpi-btn{flex:1;padding:7px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .12s;text-align:center;}
   .dpi-btn.active{border-color:var(--accent);color:var(--accent);}
   .dpi-btn:hover{border-color:#555;color:var(--text);}
+  .control-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin:10px 0;}
+  .control-row label,.control-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.04em;}
+  .control-value{font-family:var(--mono);font-size:10px;color:var(--accent);min-width:44px;text-align:right;}
+  .control-checkbox{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:var(--mono);font-size:10px;color:var(--text);}
+  .label-with-help{display:inline-flex;align-items:center;gap:6px;}
+  .help-dot{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border:1px solid #555;border-radius:50%;color:#999;font-family:var(--mono);font-size:9px;line-height:1;cursor:help;position:relative;flex:0 0 auto;}
+  .help-dot:hover,.help-dot:focus{border-color:var(--accent);color:var(--accent);outline:none;}
+  .help-dot::after{content:attr(data-help);display:none;position:absolute;z-index:5;left:50%;top:20px;transform:translateX(-50%);width:230px;background:#101010;border:1px solid var(--accent);color:var(--text);padding:9px 10px;font-size:9px;line-height:1.45;text-align:left;box-shadow:0 8px 24px rgba(0,0,0,.35);}
+  .help-dot:hover::after,.help-dot:focus::after{display:block;}
+  input[type="range"]{grid-column:1 / 3;width:100%;accent-color:var(--accent);}
+  input[type="number"],select{width:100%;background:#101010;border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10px;padding:7px;}
+  select{cursor:pointer;}
+  .seed-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;margin-top:8px;}
+  .seed-grid .field{display:flex;flex-direction:column;gap:5px;}
+  .noise-note{font-family:var(--mono);font-size:9px;line-height:1.6;color:var(--muted);margin-top:10px;}
 </style>
 </head>
 <body>
@@ -62,8 +79,18 @@
 <div class="main">
   <div class="scale-wrapper">
     <div class="scale-label">Preview — Kodak Q13 proportions (203 × 30 mm)</div>
-    <canvas id="scaleCanvas"></canvas>
-    <div id="patchLabels"></div>
+    <div class="preview-grid">
+      <div>
+        <div class="preview-pane-title">Clean reference</div>
+        <canvas id="cleanCanvas" class="scale-canvas"></canvas>
+        <div id="cleanPatchLabels" class="patch-labels"></div>
+      </div>
+      <div>
+        <div class="preview-pane-title">Noisy test export</div>
+        <canvas id="noisyCanvas" class="scale-canvas"></canvas>
+        <div id="noisyPatchLabels" class="patch-labels"></div>
+      </div>
+    </div>
   </div>
   <div class="sidebar">
     <div class="card">
@@ -85,6 +112,85 @@
         <div class="dpi-btn" data-dpi="300">300 dpi</div>
         <div class="dpi-btn" data-dpi="600">600 dpi</div>
       </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Noise Controls</div>
+      <label class="control-checkbox">
+        <input type="checkbox" id="noiseEnabled">
+        <span>Enable noisy export</span>
+        <span class="help-dot" tabindex="0" data-help="When off, exports remain the perfect reference grayscale. Turn on to apply the controls below to TIFF and PNG output.">?</span>
+      </label>
+      <div class="control-row">
+        <span class="label-with-help">
+          <label for="noiseModel">Noise model</label>
+          <span class="help-dot" tabindex="0" data-help="Gaussian simulates sensor/scanner noise, uniform gives bounded random jitter, and patch-level changes whole patch means.">?</span>
+        </span>
+        <select id="noiseModel">
+          <option value="gaussian">Gaussian per-pixel</option>
+          <option value="uniform">Uniform per-pixel</option>
+          <option value="patch">Patch-level variation</option>
+        </select>
+      </div>
+      <div class="control-row">
+        <span class="label-with-help">
+          <label for="noiseAmount">Noise level</label>
+          <span class="help-dot" tabindex="0" data-help="Main noise strength in raw 8-bit pixel values. For Gaussian this is roughly standard deviation; for uniform it is the maximum plus/minus range.">?</span>
+        </span>
+        <span class="control-value" id="noiseAmountValue">0 px</span>
+        <input type="range" id="noiseAmount" min="0" max="40" step="1" value="0">
+      </div>
+      <div class="control-row">
+        <span class="label-with-help">
+          <label for="noiseRandomness">Coverage</label>
+          <span class="help-dot" tabindex="0" data-help="For per-pixel noise, controls the percentage of pixels affected. For patch-level variation, scales the patch offset strength.">?</span>
+        </span>
+        <span class="control-value" id="noiseRandomnessValue">75%</span>
+        <input type="range" id="noiseRandomness" min="0" max="100" step="1" value="75">
+      </div>
+      <div class="control-row">
+        <span class="label-with-help">
+          <label for="verticalGradient">Vertical shading</label>
+          <span class="help-dot" tabindex="0" data-help="Adds top-to-bottom brightness falloff independent of patch values, useful for testing uneven illumination or scanner shading.">?</span>
+        </span>
+        <span class="control-value" id="verticalGradientValue">0 px</span>
+        <input type="range" id="verticalGradient" min="-30" max="30" step="1" value="0">
+      </div>
+      <div class="control-row">
+        <span class="label-with-help">
+          <label for="blurAmount">Edge blur</label>
+          <span class="help-dot" tabindex="0" data-help="Applies a simple blur after noise, softening patch boundaries and smoothing high-frequency noise.">?</span>
+        </span>
+        <span class="control-value" id="blurAmountValue">0 px</span>
+        <input type="range" id="blurAmount" min="0" max="4" step="1" value="0">
+      </div>
+      <div class="control-row">
+        <span class="label-with-help">
+          <label for="patchBias">Patch variation</label>
+          <span class="help-dot" tabindex="0" data-help="Adds a seeded per-patch mean shift on top of the selected noise model, simulating print or card variation.">?</span>
+        </span>
+        <span class="control-value" id="patchBiasValue">0 px</span>
+        <input type="range" id="patchBias" min="0" max="30" step="1" value="0">
+      </div>
+      <div class="seed-grid">
+        <div class="field">
+          <span class="label-with-help">
+            <label class="control-label" for="noiseSeed">Seed</label>
+            <span class="help-dot" tabindex="0" data-help="The numeric starting point for repeatable noise. Same seed plus same settings produces the same generated pixels.">?</span>
+          </span>
+          <input type="number" id="noiseSeed" value="1234" min="1" step="1">
+        </div>
+        <div class="field">
+          <span class="label-with-help">
+            <label class="control-label" for="seedMode">Random mode</label>
+            <span class="help-dot" tabindex="0" data-help="Repeatable uses the seed for identical test files. Random export chooses a new seed each download and includes it in the filename.">?</span>
+          </span>
+          <select id="seedMode">
+            <option value="fixed">Repeatable</option>
+            <option value="random">Random export</option>
+          </select>
+        </div>
+      </div>
+      <div class="noise-note">Amount is applied in encoded 8-bit eciRGB gray values, matching the measurement app's raw pixel output.</div>
     </div>
     <div class="card">
       <div class="card-title">Export</div>
@@ -148,28 +254,41 @@ function linearToSRGB(c) {
 }
 
 const CANVAS_W = Math.round(203 * 4), CANVAS_H = Math.round(30 * 4);
-const canvas = document.getElementById('scaleCanvas');
-canvas.width = CANVAS_W; canvas.height = CANVAS_H;
-const ctx = canvas.getContext('2d');
+const cleanCanvas = document.getElementById('cleanCanvas');
+const noisyCanvas = document.getElementById('noisyCanvas');
+cleanCanvas.width = CANVAS_W; cleanCanvas.height = CANVAS_H;
+noisyCanvas.width = CANVAS_W; noisyCanvas.height = CANVAS_H;
 
-(function drawScale() {
-  const pw = CANVAS_W / 20;
-  for (let i = 0; i < 20; i++) {
-    const cprime = patches[i].px / 255;
-    const lin = eciToLinear(cprime);
-    const s = Math.round(Math.max(0,Math.min(1, linearToSRGB(lin))) * 255);
-    ctx.fillStyle = `rgb(${s},${s},${s})`;
-    ctx.fillRect(Math.round(i*pw), 0, Math.round(pw), CANVAS_H);
+function eciByteToSRGBByte(v) {
+  const cprime = v / 255;
+  const lin = eciToLinear(cprime);
+  return Math.round(Math.max(0, Math.min(1, linearToSRGB(lin))) * 255);
+}
+
+function drawPixelsToCanvas(targetCanvas, width, height, data) {
+  const ctx = targetCanvas.getContext('2d');
+  const img = ctx.createImageData(width, height);
+  for (let i = 0; i < data.length; i++) {
+    const v = eciByteToSRGBByte(data[i]);
+    img.data[i*4] = v;
+    img.data[i*4+1] = v;
+    img.data[i*4+2] = v;
+    img.data[i*4+3] = 255;
   }
-})();
+  ctx.putImageData(img, 0, 0);
+}
 
 // Labels
-const labelsDiv = document.getElementById('patchLabels');
-patches.forEach(({ label }) => {
-  const d = document.createElement('div');
-  d.className = 'patch-label'; d.textContent = label;
-  labelsDiv.appendChild(d);
-});
+function populatePatchLabels(containerId) {
+  const labelsDiv = document.getElementById(containerId);
+  patches.forEach(({ label }) => {
+    const d = document.createElement('div');
+    d.className = 'patch-label'; d.textContent = label;
+    labelsDiv.appendChild(d);
+  });
+}
+populatePatchLabels('cleanPatchLabels');
+populatePatchLabels('noisyPatchLabels');
 
 // Patch table
 const tbody = document.getElementById('patchTableBody');
@@ -189,6 +308,31 @@ document.getElementById('dpiGroup').addEventListener('click', e => {
   const btn = e.target.closest('.dpi-btn'); if (!btn) return;
   document.querySelectorAll('.dpi-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active'); selectedDpi = parseInt(btn.dataset.dpi);
+  renderPreviews();
+});
+
+const noiseControlIds = [
+  'noiseEnabled','noiseModel','noiseAmount','noiseRandomness',
+  'verticalGradient','blurAmount','patchBias','noiseSeed','seedMode'
+];
+
+function updateNoiseLabels() {
+  document.getElementById('noiseAmountValue').textContent = `${document.getElementById('noiseAmount').value} px`;
+  document.getElementById('noiseRandomnessValue').textContent = `${document.getElementById('noiseRandomness').value}%`;
+  document.getElementById('verticalGradientValue').textContent = `${document.getElementById('verticalGradient').value} px`;
+  document.getElementById('blurAmountValue').textContent = `${document.getElementById('blurAmount').value} px`;
+  document.getElementById('patchBiasValue').textContent = `${document.getElementById('patchBias').value} px`;
+}
+
+noiseControlIds.forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    updateNoiseLabels();
+    renderPreviews();
+  });
+  document.getElementById(id).addEventListener('change', () => {
+    updateNoiseLabels();
+    renderPreviews();
+  });
 });
 
 // ── eciRGB v2 ICC profile (gray, L* TRC, D50) ─────────────────────────────────
@@ -264,16 +408,173 @@ function buildEciRGBv2GrayProfile() {
 const iccProfile = buildEciRGBv2GrayProfile();
 
 // ── Pixel builder ─────────────────────────────────────────────────────────────
-function buildPixels(dpi) {
-  const W = Math.round((203/25.4)*dpi), H = Math.round((30/25.4)*dpi);
+function buildCleanPixelData(W, H) {
   const pw = W / 20;
-  const data = new Uint8Array(W*H);
+  const data = new Uint8Array(W * H);
   for (let y=0;y<H;y++)
     for (let p=0;p<20;p++) {
       const x0=Math.round(p*pw), x1=(p<19)?Math.round((p+1)*pw):W;
       data.fill(patches[p].px, y*W+x0, y*W+x1);
     }
+  return data;
+}
+
+function buildPixels(dpi) {
+  const W = Math.round((203/25.4)*dpi), H = Math.round((30/25.4)*dpi);
+  const data = buildCleanPixelData(W, H);
   return {width:W, height:H, data};
+}
+
+function buildPreviewPixels() {
+  return {width:CANVAS_W, height:CANVAS_H, data:buildCleanPixelData(CANVAS_W, CANVAS_H)};
+}
+
+function getNoiseOptions(forExport=false) {
+  const seedMode = document.getElementById('seedMode').value;
+  let seed = parseInt(document.getElementById('noiseSeed').value, 10);
+  if (!Number.isFinite(seed) || seed <= 0) seed = 1;
+  if (forExport && seedMode === 'random') seed = Math.floor(Math.random() * 2147483646) + 1;
+
+  const amount = parseFloat(document.getElementById('noiseAmount').value);
+  const randomness = parseFloat(document.getElementById('noiseRandomness').value) / 100;
+  const gradient = parseFloat(document.getElementById('verticalGradient').value);
+  const blur = parseInt(document.getElementById('blurAmount').value, 10);
+  const patchBias = parseFloat(document.getElementById('patchBias').value);
+  const enabled = document.getElementById('noiseEnabled').checked &&
+    (amount > 0 || gradient !== 0 || blur > 0 || patchBias > 0);
+
+  return {
+    enabled,
+    model:document.getElementById('noiseModel').value,
+    amount,
+    randomness,
+    gradient,
+    blur,
+    patchBias,
+    seed,
+    seedMode
+  };
+}
+
+function makeRng(seed) {
+  let state = seed >>> 0;
+  return function rng() {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function gaussian(rng) {
+  const u1 = Math.max(rng(), 1e-12);
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function sampleNoise(model, amount, rng) {
+  if (amount <= 0) return 0;
+  return model === 'uniform'
+    ? (rng() * 2 - 1) * amount
+    : gaussian(rng) * amount;
+}
+
+function clampByte(value) {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function applyBoxBlur(width, height, source, radius) {
+  if (radius <= 0) return source;
+
+  const temp = new Uint8Array(source.length);
+  const dest = new Uint8Array(source.length);
+
+  for (let y=0;y<height;y++) {
+    for (let x=0;x<width;x++) {
+      let sum = 0, count = 0;
+      for (let dx=-radius;dx<=radius;dx++) {
+        const xx = x + dx;
+        if (xx >= 0 && xx < width) {
+          sum += source[y*width+xx];
+          count++;
+        }
+      }
+      temp[y*width+x] = Math.round(sum / count);
+    }
+  }
+
+  for (let y=0;y<height;y++) {
+    for (let x=0;x<width;x++) {
+      let sum = 0, count = 0;
+      for (let dy=-radius;dy<=radius;dy++) {
+        const yy = y + dy;
+        if (yy >= 0 && yy < height) {
+          sum += temp[yy*width+x];
+          count++;
+        }
+      }
+      dest[y*width+x] = Math.round(sum / count);
+    }
+  }
+
+  return dest;
+}
+
+function applyNoiseToPixels(cleanPixels, options) {
+  if (!options.enabled) {
+    return cleanPixels;
+  }
+
+  const {width, height} = cleanPixels;
+  let data = new Uint8Array(cleanPixels.data);
+  const rng = makeRng(options.seed);
+  const patchWidth = width / 20;
+  const patchOffsets = new Array(20).fill(0);
+  const biasOffsets = new Array(20).fill(0);
+
+  if (options.model === 'patch') {
+    for (let p=0;p<20;p++) {
+      patchOffsets[p] = sampleNoise('gaussian', options.amount * options.randomness, rng);
+    }
+  }
+
+  if (options.patchBias > 0) {
+    for (let p=0;p<20;p++) {
+      biasOffsets[p] = sampleNoise('gaussian', options.patchBias, rng);
+    }
+  }
+
+  for (let y=0;y<height;y++) {
+    const gradientOffset = height > 1 ? ((y / (height - 1)) - 0.5) * options.gradient : 0;
+    for (let x=0;x<width;x++) {
+      const i = y * width + x;
+      const patch = Math.min(19, Math.floor(x / patchWidth));
+      let offset = gradientOffset + biasOffsets[patch];
+
+      if (options.model === 'patch') {
+        offset += patchOffsets[patch];
+      } else if (options.amount > 0 && rng() < options.randomness) {
+        offset += sampleNoise(options.model, options.amount, rng);
+      }
+
+      data[i] = clampByte(data[i] + offset);
+    }
+  }
+
+  data = applyBoxBlur(width, height, data, options.blur);
+  return {width, height, data};
+}
+
+function buildNoisyPixels(dpi, options) {
+  return applyNoiseToPixels(buildPixels(dpi), options);
+}
+
+function renderPreviews() {
+  const clean = buildPreviewPixels();
+  drawPixelsToCanvas(cleanCanvas, clean.width, clean.height, clean.data);
+  const noisy = applyNoiseToPixels(clean, getNoiseOptions(false));
+  drawPixelsToCanvas(noisyCanvas, noisy.width, noisy.height, noisy.data);
 }
 
 // ── TIFF writer ───────────────────────────────────────────────────────────────
@@ -312,17 +613,38 @@ function setStatus(msg,cls){
   el.textContent=msg; el.className='status'+(cls?' '+cls:'');
 }
 
+function noiseFileSuffix(options) {
+  if (!options.enabled) return '';
+  const parts = [
+    `noise-${options.model}`,
+    `amt-${options.amount}`,
+    `rnd-${Math.round(options.randomness * 100)}`,
+    `seed-${options.seed}`
+  ];
+  if (options.gradient !== 0) parts.push(`grad-${options.gradient}`);
+  if (options.blur > 0) parts.push(`blur-${options.blur}`);
+  if (options.patchBias > 0) parts.push(`bias-${options.patchBias}`);
+  return '_' + parts.join('_');
+}
+
+function buildExportPixels() {
+  const options = getNoiseOptions(true);
+  const pixels = options.enabled ? buildNoisyPixels(selectedDpi, options) : buildPixels(selectedDpi);
+  return {pixels, options};
+}
+
 document.getElementById('saveTif').addEventListener('click',()=>{
   const btn=document.getElementById('saveTif'); btn.disabled=true;
   setStatus('Building TIFF…');
   setTimeout(()=>{
     try {
-      const {width,height,data}=buildPixels(selectedDpi);
+      const {pixels, options}=buildExportPixels();
+      const {width,height,data}=pixels;
       const tiffBuf=buildTiff(width,height,data,selectedDpi,iccProfile);
       const blob=new Blob([tiffBuf],{type:'image/tiff'});
       const url=URL.createObjectURL(blob);
       const a=document.createElement('a'); a.href=url;
-      a.download=`kodak_q13_eciRGBv2_${selectedDpi}dpi.tif`;
+      a.download=`kodak_q13_eciRGBv2_${selectedDpi}dpi${noiseFileSuffix(options)}.tif`;
       a.click(); URL.revokeObjectURL(url);
       setStatus(`Saved ${width}×${height}px @ ${selectedDpi}dpi · ICC:${iccProfile.length}B`,'ok');
     } catch(e){setStatus('Error: '+e.message,'err');}
@@ -331,22 +653,23 @@ document.getElementById('saveTif').addEventListener('click',()=>{
 });
 
 document.getElementById('savePng').addEventListener('click',()=>{
-  const {width,height,data}=buildPixels(selectedDpi);
+  const {pixels, options}=buildExportPixels();
+  const {width,height,data}=pixels;
   const off=document.createElement('canvas'); off.width=width; off.height=height;
   const c=off.getContext('2d'), img=c.createImageData(width,height);
   for(let i=0;i<data.length;i++){
-    const cp=data[i]/255, thresh=9.033*0.008856;
-    const lin=cp<thresh?cp/9.033:Math.pow((cp+0.16)/1.16,3);
-    const s=lin<=0.0031308?12.92*lin:1.055*Math.pow(lin,1/2.4)-0.055;
-    const v=Math.round(Math.max(0,Math.min(1,s))*255);
+    const v=eciByteToSRGBByte(data[i]);
     img.data[i*4]=v;img.data[i*4+1]=v;img.data[i*4+2]=v;img.data[i*4+3]=255;
   }
   c.putImageData(img,0,0);
   const a=document.createElement('a');
   a.href=off.toDataURL('image/png');
-  a.download=`kodak_q13_sRGB_preview_${selectedDpi}dpi.png`;
+  a.download=`kodak_q13_sRGB_preview_${selectedDpi}dpi${noiseFileSuffix(options)}.png`;
   a.click(); setStatus('PNG saved','ok');
 });
+
+updateNoiseLabels();
+renderPreviews();
 </script>
 </body>
 </html>

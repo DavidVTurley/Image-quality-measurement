@@ -11,7 +11,12 @@ public sealed record PatchMeasurement(
     double NoiseRed,
     double NoiseGreen,
     double NoiseBlue,
-    bool IsColor)
+    bool IsColor,
+    double SampleCenterX,
+    double SampleCenterY,
+    int SampleX,
+    int SampleY,
+    int SampleSize)
 {
     public double Output => OutputGreen;
 

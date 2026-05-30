@@ -34,13 +34,15 @@ public sealed class Q13Measurer
         var sampleSize = options.SampleSize;
         var patches = new List<PatchMeasurement>(options.PatchCount);
         var targets = Q13Target.KodakPatches;
+        var sampleCenters = ResolveSampleCenters(image.Width, image.Height, options);
 
         for (var patchIndex = 0; patchIndex < options.PatchCount; patchIndex++)
         {
             var target = targets[patchIndex];
-            var rect = GetCenteredPatchSample(image.Width, image.Height, options.PatchCount, patchIndex, sampleSize);
+            var center = sampleCenters[patchIndex];
+            var rect = GetSampleRectFromCenter(image.Width, image.Height, sampleSize, center.X, center.Y);
             using var roi = new Mat(image, rect);
-            patches.Add(MeasurePatch(roi, target, patchIndex, channels));
+            patches.Add(MeasurePatch(roi, target, patchIndex, channels, center.X, center.Y, rect));
         }
 
         return new Q13MeasurementResult(
@@ -64,20 +66,53 @@ public sealed class Q13Measurer
         {
             throw new ArgumentOutOfRangeException(nameof(options), "Sample size must be a positive odd number.");
         }
+
+        if (options.SampleCenters is not null && options.SampleCenters.Count != options.PatchCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Explicit sample centers must include exactly one point per Q-13 patch.");
+        }
+
+        if (options.SampleCenters is not null)
+        {
+            var expected = Enumerable.Range(0, options.PatchCount).ToArray();
+            var actual = options.SampleCenters.Select(point => point.PatchIndex).Order().ToArray();
+            if (!actual.SequenceEqual(expected))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "Explicit sample centers must be indexed 0 through 19 exactly once.");
+            }
+        }
     }
 
-    private static Rect GetCenteredPatchSample(int width, int height, int patchCount, int patchIndex, int sampleSize)
+    public static IReadOnlyList<Q13SamplePoint> CreateStraightLineSampleCenters(int width, int height, int patchCount = 20)
     {
         var patchWidth = width / (double)patchCount;
-        var centerX = (patchIndex + 0.5) * patchWidth;
         var centerY = height / 2.0;
+        return Enumerable.Range(0, patchCount)
+            .Select(patchIndex => new Q13SamplePoint(patchIndex, (patchIndex + 0.5) * patchWidth, centerY))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<Q13SamplePoint> ResolveSampleCenters(int width, int height, Q13MeasurementOptions options)
+    {
+        if (options.SampleCenters is null)
+        {
+            return CreateStraightLineSampleCenters(width, height, options.PatchCount);
+        }
+
+        return options.SampleCenters
+            .OrderBy(point => point.PatchIndex)
+            .ToArray();
+    }
+
+    private static Rect GetSampleRectFromCenter(int width, int height, int sampleSize, double centerX, double centerY)
+    {
         var x = Clamp((int)Math.Round(centerX - sampleSize / 2.0), 0, width - sampleSize);
         var y = Clamp((int)Math.Round(centerY - sampleSize / 2.0), 0, height - sampleSize);
 
         return new Rect(x, y, sampleSize, sampleSize);
     }
 
-    private static PatchMeasurement MeasurePatch(Mat roi, Q13TargetPatch target, int patchIndex, int channels)
+    private static PatchMeasurement MeasurePatch(Mat roi, Q13TargetPatch target, int patchIndex, int channels, double centerX, double centerY, Rect rect)
     {
         if (channels == 1)
         {
@@ -93,7 +128,12 @@ public sealed class Q13Measurer
                 noise,
                 noise,
                 noise,
-                IsColor: false);
+                IsColor: false,
+                centerX,
+                centerY,
+                rect.X,
+                rect.Y,
+                rect.Width);
         }
 
         Cv2.Split(roi, out var splitChannels);
@@ -114,7 +154,12 @@ public sealed class Q13Measurer
                 redNoise,
                 greenNoise,
                 blueNoise,
-                IsColor: true);
+                IsColor: true,
+                centerX,
+                centerY,
+                rect.X,
+                rect.Y,
+                rect.Width);
         }
         finally
         {

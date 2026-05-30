@@ -4,3 +4,5 @@ obj/
 *.user
 *.suo
 TestResults/
+.buildtmp/
+/Generated Q13

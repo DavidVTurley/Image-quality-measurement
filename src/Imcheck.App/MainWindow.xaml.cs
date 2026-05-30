@@ -11,6 +11,7 @@ public partial class MainWindow : Window
 {
     private readonly Q13Measurer _measurer = new();
     private Q13MeasurementResult? _currentResult;
+    private IReadOnlyList<Q13SamplePoint>? _sampleCenters;
 
     public MainWindow()
     {
@@ -33,21 +34,59 @@ public partial class MainWindow : Window
         try
         {
             StatusText.Text = "Measuring image...";
-            _currentResult = _measurer.Measure(dialog.FileName);
+            _currentResult = _measurer.Measure(dialog.FileName, new Q13MeasurementOptions { SampleCenters = _sampleCenters });
             PreviewImage.Source = LoadBitmap(dialog.FileName);
-            ResultsGrid.ItemsSource = _currentResult.Patches;
             FileNameText.Text = dialog.FileName;
-            SamplingText.Text = string.Create(CultureInfo.InvariantCulture, $"{_currentResult.SamplingPixelsPerInch:0.0} pix/inch ({_currentResult.SamplingPixelsPerInch / 25.4:0.0} pix/mm)");
-            SampleSizeText.Text = _currentResult.SampleDataSize.ToString(CultureInfo.InvariantCulture);
-            GammaText.Text = _currentResult.InverseGamma.ToString("0.00", CultureInfo.InvariantCulture);
-            PatchCountText.Text = _currentResult.Patches.Count.ToString(CultureInfo.InvariantCulture);
-            ExportButton.IsEnabled = true;
-            StatusText.Text = "Measurement complete.";
+            ShowResult(_currentResult);
         }
         catch (Exception ex)
         {
             StatusText.Text = "Measurement failed.";
             MessageBox.Show(this, ex.Message, "Measurement failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void LoadPointsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Open sample point CSV",
+            Filter = "CSV or text files|*.csv;*.txt|All files|*.*"
+        };
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            _sampleCenters = Q13SamplePointCsv.Load(dialog.FileName);
+            ClearPointsButton.IsEnabled = true;
+            StatusText.Text = $"Loaded {_sampleCenters.Count} explicit sample centers.";
+
+            if (_currentResult is not null)
+            {
+                _currentResult = _measurer.Measure(_currentResult.ImagePath, new Q13MeasurementOptions { SampleCenters = _sampleCenters });
+                ShowResult(_currentResult);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Could not load sample points", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ClearPointsButton_Click(object sender, RoutedEventArgs e)
+    {
+        _sampleCenters = null;
+        ClearPointsButton.IsEnabled = false;
+        StatusText.Text = "Using automatic straight-line sample centers.";
+
+        if (_currentResult is not null)
+        {
+            _currentResult = _measurer.Measure(_currentResult.ImagePath);
+            ShowResult(_currentResult);
         }
     }
 
@@ -92,4 +131,18 @@ public partial class MainWindow : Window
         bitmap.Freeze();
         return bitmap;
     }
+
+    private void ShowResult(Q13MeasurementResult result)
+    {
+        ResultsGrid.ItemsSource = result.Patches;
+        SamplingText.Text = string.Create(CultureInfo.InvariantCulture, $"{result.SamplingPixelsPerInch:0.0} pix/inch ({result.SamplingPixelsPerInch / 25.4:0.0} pix/mm)");
+        SampleSizeText.Text = result.SampleDataSize.ToString(CultureInfo.InvariantCulture);
+        GammaText.Text = result.InverseGamma.ToString("0.00", CultureInfo.InvariantCulture);
+        PatchCountText.Text = result.Patches.Count.ToString(CultureInfo.InvariantCulture);
+        ExportButton.IsEnabled = true;
+        StatusText.Text = _sampleCenters is null
+            ? "Measurement complete using automatic straight-line centers."
+            : "Measurement complete using explicit sample centers.";
+    }
+
 }

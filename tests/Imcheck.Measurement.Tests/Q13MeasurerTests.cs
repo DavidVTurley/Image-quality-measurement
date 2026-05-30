@@ -26,7 +26,7 @@ public sealed class Q13MeasurerTests
             Assert.Equal(0, pair.First.Noise);
         });
         Assert.Contains("244\t0", result.ToImcheckText());
-        Assert.Contains("Patch,InputRed,InputGreen,InputBlue,Output,Noise", result.ToCsv());
+        Assert.Contains("Patch,SampleCenterX,SampleCenterY,SampleX,SampleY,SampleSize,InputRed,InputGreen,InputBlue,Output,Noise", result.ToCsv());
     }
 
     [Fact]
@@ -63,6 +63,45 @@ public sealed class Q13MeasurerTests
             Assert.True(patch.NoiseGreen >= 0);
             Assert.True(patch.NoiseBlue >= 0);
         });
+    }
+
+    [Fact]
+    public void ExplicitSampleCentersCanReproduceStraightLineMeasurement()
+    {
+        var path = ExampleImage("kodak_q13_eciRGBv2_300dpi.tif");
+        var centers = Q13Measurer.CreateStraightLineSampleCenters(width: 2398, height: 354);
+
+        var result = new Q13Measurer().Measure(path, new Q13MeasurementOptions { SampleCenters = centers });
+
+        Assert.Equal(20, result.Patches.Count);
+        Assert.Equal(244, result.Patches[0].Output);
+        Assert.Equal(25, result.Patches[19].Output);
+        Assert.Equal(centers[0].X, result.Patches[0].SampleCenterX);
+        Assert.Equal(centers[0].Y, result.Patches[0].SampleCenterY);
+    }
+
+    [Fact]
+    public void SamplePointCsvLoadsExplicitPatchCoordinates()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var lines = new[] { "Patch,X,Y" }
+                .Concat(Enumerable.Range(0, 20).Select(i => FormattableString.Invariant($"{i},{i + 0.25},{100 + i + 0.5}")));
+            File.WriteAllLines(path, lines);
+
+            var points = Q13SamplePointCsv.Load(path);
+
+            Assert.Equal(20, points.Count);
+            Assert.Equal(0, points[0].PatchIndex);
+            Assert.Equal(0.25, points[0].X);
+            Assert.Equal(100.5, points[0].Y);
+            Assert.Equal(19, points[19].PatchIndex);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     private static string ExampleImage(string fileName)

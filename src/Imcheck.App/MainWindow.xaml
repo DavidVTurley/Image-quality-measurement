@@ -17,6 +17,8 @@
             <DockPanel Margin="16,12">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button x:Name="OpenButton" Width="112" Height="34" Margin="0,0,8,0" Click="OpenButton_Click">Open Image</Button>
+                    <Button x:Name="LoadPointsButton" Width="132" Height="34" Margin="0,0,8,0" Click="LoadPointsButton_Click">Load Points CSV</Button>
+                    <Button x:Name="ClearPointsButton" Width="112" Height="34" Margin="0,0,8,0" Click="ClearPointsButton_Click" IsEnabled="False">Clear Points</Button>
                     <Button x:Name="ExportButton" Width="112" Height="34" Click="ExportButton_Click" IsEnabled="False">Export CSV</Button>
                 </StackPanel>
                 <StackPanel>
@@ -88,6 +90,8 @@
                               AlternatingRowBackground="#F8FAFC">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Patch" Binding="{Binding Index}" Width="64" />
+                            <DataGridTextColumn Header="Center X" Binding="{Binding SampleCenterX, StringFormat=0.##}" Width="*" />
+                            <DataGridTextColumn Header="Center Y" Binding="{Binding SampleCenterY, StringFormat=0.##}" Width="*" />
                             <DataGridTextColumn Header="Input R" Binding="{Binding InputRed, StringFormat=0.0000}" Width="*" />
                             <DataGridTextColumn Header="Input G" Binding="{Binding InputGreen, StringFormat=0.0000}" Width="*" />
                             <DataGridTextColumn Header="Input B" Binding="{Binding InputBlue, StringFormat=0.0000}" Width="*" />

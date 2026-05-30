@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Imcheck.App/Imcheck.App.csproj" />
+    <Project Path="src/Imcheck.Cli/Imcheck.Cli.csproj" />
     <Project Path="src/Imcheck.Measurement/Imcheck.Measurement.csproj" />
   </Folder>
   <Folder Name="/tests/">
