@@ -1,6 +1,6 @@
 using OpenCvSharp;
 
-namespace Imcheck.Measurement;
+namespace Imcheck.Measurement.Meaasurements.Q13;
 
 public sealed class Q13Measurer
 {

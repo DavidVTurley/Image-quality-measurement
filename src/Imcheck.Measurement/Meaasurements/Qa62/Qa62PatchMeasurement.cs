@@ -1,4 +1,4 @@
-namespace Imcheck.Measurement;
+namespace Imcheck.Measurement.Meaasurements.Qa62;
 
 public sealed record Qa62PatchMeasurement(
     int Step,

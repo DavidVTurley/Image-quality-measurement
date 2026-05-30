@@ -1,4 +1,4 @@
-namespace Imcheck.Measurement;
+namespace Imcheck.Measurement.Meaasurements.Q13;
 
 public sealed record Q13TargetPatch(int Index, double InputRed, double InputGreen, double InputBlue)
 {

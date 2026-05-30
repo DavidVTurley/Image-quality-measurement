@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Imcheck.Measurement;
+namespace Imcheck.Measurement.Meaasurements.Q13;
 
 public sealed record Q13MeasurementResult(
     string ImagePath,

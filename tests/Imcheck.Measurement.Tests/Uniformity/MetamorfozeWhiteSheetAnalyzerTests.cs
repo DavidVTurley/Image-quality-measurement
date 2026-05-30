@@ -1,4 +1,4 @@
-using Imcheck.Measurement.Uniformity;
+using Imcheck.Measurement.Meaasurements.Uniformity;
 using OpenCvSharp;
 
 namespace Imcheck.Measurement.Tests;

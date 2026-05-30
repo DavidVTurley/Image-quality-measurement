@@ -1,4 +1,4 @@
-namespace Imcheck.Measurement.Uniformity;
+namespace Imcheck.Measurement.Meaasurements.Uniformity;
 
 internal static class ColorConversions
 {
