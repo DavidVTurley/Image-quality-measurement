@@ -1,4 +1,5 @@
 using Imcheck.Measurement;
+using Imcheck.Measurement.Metamorfoze;
 
 return await RunAsync(args);
 
@@ -21,6 +22,31 @@ static async Task<int> RunAsync(string[] args)
                 new Qa62TargetGeneratorOptions { Dpi = options.Dpi });
 
             Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Generated QA-62 target: {result.OutputPath} ({result.Width}x{result.Height}, dpi intent={result.Dpi})"));
+            return 0;
+        }
+
+        if (options.AnalysisTarget == AnalysisMode.WhiteSheet)
+        {
+            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(
+                options.ImagePath!,
+                new MetamorfozeWhiteSheetAnalysisOptions
+                {
+                    SampleSize = options.SampleSizeWasProvided ? options.SampleSize : new MetamorfozeWhiteSheetAnalysisOptions().SampleSize,
+                    ColorSpace = options.ColorSpace,
+                    QualityLevel = options.QualityLevel,
+                    ImagePlaneSize = options.ImagePlaneSize
+                });
+
+            if (options.CsvPath is not null)
+            {
+                await File.WriteAllTextAsync(options.CsvPath, result.ToCsv());
+                Console.WriteLine($"White-sheet analysis: {options.CsvPath}");
+            }
+            else
+            {
+                Console.Write(result.ToCsv());
+            }
+
             return 0;
         }
 
@@ -112,6 +138,7 @@ Imcheck.Cli - Imcheck-style target measurement
 Usage:
   Imcheck.Cli <image-path> [--target q13|qa62] [--points <points.csv>] [--out <results.csv>] [--imcheck-out <results.xls>] [--sample-size <odd-pixels>] [--sampling <pix-per-inch>]
   Imcheck.Cli --generate qa62 [--out <target.png>] [--dpi <pixels-per-inch>]
+  Imcheck.Cli --analyze white-sheet <image-path> [--out <results.csv>] [--sample-size <odd-pixels>] [--color-space srgb|adobe-rgb|ecirgbv2] [--quality full|light|extra-light] [--image-size a3|a2|a1|a0]
 
 Examples:
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif"
@@ -119,6 +146,7 @@ Examples:
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\points.csv" --imcheck-out "C:\path\results.xls"
   dotnet run --project src\Imcheck.Cli -- --target qa62 "C:\path\QA-62.jpg" --out "C:\path\qa62.csv" --imcheck-out "C:\path\qa62.xls"
   dotnet run --project src\Imcheck.Cli -- --generate qa62 --out "C:\path\QA62_Recreation_600dpi.png" --dpi 600
+  dotnet run --project src\Imcheck.Cli -- --analyze white-sheet "C:\path\white-sheet.tif" --out "C:\path\white-sheet.csv" --color-space ecirgbv2 --quality full --image-size a3
 
 Points CSV:
   Patch,X,Y
@@ -136,19 +164,24 @@ internal sealed record CliOptions(
     string? ImagePath,
     MeasurementTarget Target,
     GenerationTarget? GenerateTarget,
+    AnalysisMode? AnalysisTarget,
     string? PointsPath,
     string? CsvPath,
     string? ImcheckTextPath,
     int SampleSize,
     bool SampleSizeWasProvided,
     double SamplingPixelsPerInch,
-    int Dpi)
+    int Dpi,
+    RgbColorSpace ColorSpace,
+    MetamorfozeQualityLevel QualityLevel,
+    MetamorfozeImagePlaneSize ImagePlaneSize)
 {
     public static CliOptions Parse(string[] args)
     {
         string? imagePath = null;
         var target = MeasurementTarget.Q13;
         GenerationTarget? generateTarget = null;
+        AnalysisMode? analysisTarget = null;
         string? pointsPath = null;
         string? csvPath = null;
         string? imcheckTextPath = null;
@@ -156,6 +189,9 @@ internal sealed record CliOptions(
         var sampleSizeWasProvided = false;
         var samplingPixelsPerInch = 301.1;
         var dpi = Qa62TargetGenerator.DefaultDpi;
+        var colorSpace = RgbColorSpace.SRgb;
+        var qualityLevel = MetamorfozeQualityLevel.Full;
+        var imagePlaneSize = MetamorfozeImagePlaneSize.UpToA3;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -177,6 +213,14 @@ internal sealed record CliOptions(
                     {
                         "qa62" or "qa-62" => GenerationTarget.Qa62,
                         _ => throw new ArgumentException("--generate only supports qa62.")
+                    };
+                    break;
+                case "--analyze":
+                    var rawAnalysisTarget = RequiredValue(args, ref i, arg);
+                    analysisTarget = rawAnalysisTarget.ToLowerInvariant() switch
+                    {
+                        "white-sheet" or "whitesheet" or "white" => AnalysisMode.WhiteSheet,
+                        _ => throw new ArgumentException("--analyze only supports white-sheet.")
                     };
                     break;
                 case "--points":
@@ -210,6 +254,37 @@ internal sealed record CliOptions(
                         throw new ArgumentException("--dpi must be an integer.");
                     }
                     break;
+                case "--color-space":
+                    var rawColorSpace = RequiredValue(args, ref i, arg);
+                    colorSpace = rawColorSpace.ToLowerInvariant() switch
+                    {
+                        "srgb" or "s-rgb" => RgbColorSpace.SRgb,
+                        "adobe-rgb" or "adobergb" or "adobe-rgb-1998" or "adobergb1998" => RgbColorSpace.AdobeRgb1998,
+                        "ecirgbv2" or "eci-rgb-v2" or "eci-rgb" => RgbColorSpace.EciRgbV2,
+                        _ => throw new ArgumentException("--color-space must be srgb, adobe-rgb, or ecirgbv2.")
+                    };
+                    break;
+                case "--quality":
+                    var rawQuality = RequiredValue(args, ref i, arg);
+                    qualityLevel = rawQuality.ToLowerInvariant() switch
+                    {
+                        "full" or "metamorfoze" => MetamorfozeQualityLevel.Full,
+                        "light" => MetamorfozeQualityLevel.Light,
+                        "extra-light" or "extralight" => MetamorfozeQualityLevel.ExtraLight,
+                        _ => throw new ArgumentException("--quality must be full, light, or extra-light.")
+                    };
+                    break;
+                case "--image-size":
+                    var rawImageSize = RequiredValue(args, ref i, arg);
+                    imagePlaneSize = rawImageSize.ToLowerInvariant() switch
+                    {
+                        "a3" or "<=a3" => MetamorfozeImagePlaneSize.UpToA3,
+                        "a2" or "<=a2" => MetamorfozeImagePlaneSize.UpToA2,
+                        "a1" or "<=a1" => MetamorfozeImagePlaneSize.UpToA1,
+                        "a0" or "<=a0" => MetamorfozeImagePlaneSize.UpToA0,
+                        _ => throw new ArgumentException("--image-size must be a3, a2, a1, or a0.")
+                    };
+                    break;
                 default:
                     if (arg.StartsWith('-'))
                     {
@@ -224,6 +299,11 @@ internal sealed record CliOptions(
                     imagePath = arg;
                     break;
             }
+        }
+
+        if (generateTarget is not null && analysisTarget is not null)
+        {
+            throw new ArgumentException("--generate and --analyze cannot be used together.");
         }
 
         if (generateTarget is not null)
@@ -248,7 +328,37 @@ internal sealed record CliOptions(
                 throw new ArgumentException("--dpi must be positive.");
             }
 
-            return new CliOptions(imagePath, target, generateTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi);
+            return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
+        }
+
+        if (analysisTarget is not null)
+        {
+            if (imagePath is null)
+            {
+                throw new ArgumentException("Image path is required.");
+            }
+
+            if (!File.Exists(imagePath))
+            {
+                throw new FileNotFoundException("Image file was not found.", imagePath);
+            }
+
+            if (pointsPath is not null || imcheckTextPath is not null)
+            {
+                throw new ArgumentException("--points and --imcheck-out are not supported with --analyze.");
+            }
+
+            if (samplingPixelsPerInch != 301.1)
+            {
+                throw new ArgumentException("--sampling is only supported when measuring targets.");
+            }
+
+            if (sampleSize <= 0 || sampleSize % 2 == 0)
+            {
+                throw new ArgumentException("--sample-size must be a positive odd integer.");
+            }
+
+            return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
         }
 
         if (imagePath is null)
@@ -281,7 +391,7 @@ internal sealed record CliOptions(
             throw new ArgumentException("--sampling must be positive.");
         }
 
-        return new CliOptions(imagePath, target, generateTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi);
+        return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
     }
 
     private static string RequiredValue(string[] args, ref int index, string optionName)
@@ -305,4 +415,9 @@ internal enum MeasurementTarget
 internal enum GenerationTarget
 {
     Qa62
+}
+
+internal enum AnalysisMode
+{
+    WhiteSheet
 }
