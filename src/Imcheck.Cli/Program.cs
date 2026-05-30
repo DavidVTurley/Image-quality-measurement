@@ -13,14 +13,59 @@ static async Task<int> RunAsync(string[] args)
     try
     {
         var options = CliOptions.Parse(args);
+        if (options.GenerateTarget == GenerationTarget.Qa62)
+        {
+            var outputPath = options.CsvPath ?? Path.Combine(Environment.CurrentDirectory, "QA62_Recreation_600dpi.png");
+            var result = new Qa62TargetGenerator().Generate(
+                outputPath,
+                new Qa62TargetGeneratorOptions { Dpi = options.Dpi });
+
+            Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Generated QA-62 target: {result.OutputPath} ({result.Width}x{result.Height}, dpi intent={result.Dpi})"));
+            return 0;
+        }
+
+        if (options.Target == MeasurementTarget.Qa62)
+        {
+            var result = new Qa62Measurer().Measure(
+                options.ImagePath!,
+                new Qa62MeasurementOptions
+                {
+                    SampleSize = options.SampleSizeWasProvided ? options.SampleSize : null,
+                    SamplingPixelsPerInch = options.SamplingPixelsPerInch
+                });
+
+            if (options.CsvPath is not null)
+            {
+                await File.WriteAllTextAsync(options.CsvPath, result.ToCsv());
+            }
+
+            if (options.ImcheckTextPath is not null)
+            {
+                await File.WriteAllTextAsync(options.ImcheckTextPath, result.ToImcheckText());
+            }
+
+            if (options.CsvPath is null && options.ImcheckTextPath is null)
+            {
+                Console.Write(result.ToCsv());
+            }
+            else
+            {
+                Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Measured {result.ImageName}: {result.Patches.Count} QA-62 patches, sampling={result.SamplingPixelsPerInch:0.0} pix/inch"));
+                if (options.CsvPath is not null) Console.WriteLine($"CSV: {options.CsvPath}");
+                if (options.ImcheckTextPath is not null) Console.WriteLine($"Imcheck text: {options.ImcheckTextPath}");
+            }
+
+            return 0;
+        }
+
         IReadOnlyList<Q13SamplePoint>? sampleCenters = null;
         if (options.PointsPath is not null)
         {
             sampleCenters = Q13SamplePointCsv.Load(options.PointsPath);
         }
 
-        var result = new Q13Measurer().Measure(
-            options.ImagePath,
+        var q13Result = new Q13Measurer().Measure(
+            options.ImagePath!,
             new Q13MeasurementOptions
             {
                 SampleSize = options.SampleSize,
@@ -29,21 +74,21 @@ static async Task<int> RunAsync(string[] args)
 
         if (options.CsvPath is not null)
         {
-            await File.WriteAllTextAsync(options.CsvPath, result.ToCsv());
+            await File.WriteAllTextAsync(options.CsvPath, q13Result.ToCsv());
         }
 
         if (options.ImcheckTextPath is not null)
         {
-            await File.WriteAllTextAsync(options.ImcheckTextPath, result.ToImcheckText());
+            await File.WriteAllTextAsync(options.ImcheckTextPath, q13Result.ToImcheckText());
         }
 
         if (options.CsvPath is null && options.ImcheckTextPath is null)
         {
-            Console.Write(result.ToCsv());
+            Console.Write(q13Result.ToCsv());
         }
         else
         {
-            Console.WriteLine($"Measured {result.ImageName}: {result.Patches.Count} patches, N={result.SampleDataSize}, 1/gamma={result.InverseGamma:0.00}");
+            Console.WriteLine($"Measured {q13Result.ImageName}: {q13Result.Patches.Count} patches, N={q13Result.SampleDataSize}, 1/gamma={q13Result.InverseGamma:0.00}");
             if (options.CsvPath is not null) Console.WriteLine($"CSV: {options.CsvPath}");
             if (options.ImcheckTextPath is not null) Console.WriteLine($"Imcheck text: {options.ImcheckTextPath}");
         }
@@ -62,15 +107,18 @@ static async Task<int> RunAsync(string[] args)
 static void PrintUsage()
 {
     Console.WriteLine("""
-Imcheck.Cli - Kodak Q-13 measurement
+Imcheck.Cli - Imcheck-style target measurement
 
 Usage:
-  Imcheck.Cli <image-path> [--points <points.csv>] [--out <results.csv>] [--imcheck-out <results.xls>] [--sample-size <odd-pixels>]
+  Imcheck.Cli <image-path> [--target q13|qa62] [--points <points.csv>] [--out <results.csv>] [--imcheck-out <results.xls>] [--sample-size <odd-pixels>] [--sampling <pix-per-inch>]
+  Imcheck.Cli --generate qa62 [--out <target.png>] [--dpi <pixels-per-inch>]
 
 Examples:
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif"
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\points.csv" --out "C:\path\results.csv"
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\points.csv" --imcheck-out "C:\path\results.xls"
+  dotnet run --project src\Imcheck.Cli -- --target qa62 "C:\path\QA-62.jpg" --out "C:\path\qa62.csv" --imcheck-out "C:\path\qa62.xls"
+  dotnet run --project src\Imcheck.Cli -- --generate qa62 --out "C:\path\QA62_Recreation_600dpi.png" --dpi 600
 
 Points CSV:
   Patch,X,Y
@@ -85,25 +133,52 @@ or:
 }
 
 internal sealed record CliOptions(
-    string ImagePath,
+    string? ImagePath,
+    MeasurementTarget Target,
+    GenerationTarget? GenerateTarget,
     string? PointsPath,
     string? CsvPath,
     string? ImcheckTextPath,
-    int SampleSize)
+    int SampleSize,
+    bool SampleSizeWasProvided,
+    double SamplingPixelsPerInch,
+    int Dpi)
 {
     public static CliOptions Parse(string[] args)
     {
         string? imagePath = null;
+        var target = MeasurementTarget.Q13;
+        GenerationTarget? generateTarget = null;
         string? pointsPath = null;
         string? csvPath = null;
         string? imcheckTextPath = null;
         var sampleSize = 39;
+        var sampleSizeWasProvided = false;
+        var samplingPixelsPerInch = 301.1;
+        var dpi = Qa62TargetGenerator.DefaultDpi;
 
         for (var i = 0; i < args.Length; i++)
         {
             var arg = args[i];
             switch (arg)
             {
+                case "--target":
+                    var rawTarget = RequiredValue(args, ref i, arg);
+                    target = rawTarget.ToLowerInvariant() switch
+                    {
+                        "q13" => MeasurementTarget.Q13,
+                        "qa62" or "qa-62" => MeasurementTarget.Qa62,
+                        _ => throw new ArgumentException("--target must be q13 or qa62.")
+                    };
+                    break;
+                case "--generate":
+                    var rawGenerateTarget = RequiredValue(args, ref i, arg);
+                    generateTarget = rawGenerateTarget.ToLowerInvariant() switch
+                    {
+                        "qa62" or "qa-62" => GenerationTarget.Qa62,
+                        _ => throw new ArgumentException("--generate only supports qa62.")
+                    };
+                    break;
                 case "--points":
                     pointsPath = RequiredValue(args, ref i, arg);
                     break;
@@ -118,6 +193,21 @@ internal sealed record CliOptions(
                     if (!int.TryParse(rawSampleSize, out sampleSize))
                     {
                         throw new ArgumentException("--sample-size must be an integer.");
+                    }
+                    sampleSizeWasProvided = true;
+                    break;
+                case "--sampling":
+                    var rawSampling = RequiredValue(args, ref i, arg);
+                    if (!double.TryParse(rawSampling, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out samplingPixelsPerInch))
+                    {
+                        throw new ArgumentException("--sampling must be a number.");
+                    }
+                    break;
+                case "--dpi":
+                    var rawDpi = RequiredValue(args, ref i, arg);
+                    if (!int.TryParse(rawDpi, out dpi))
+                    {
+                        throw new ArgumentException("--dpi must be an integer.");
                     }
                     break;
                 default:
@@ -136,6 +226,31 @@ internal sealed record CliOptions(
             }
         }
 
+        if (generateTarget is not null)
+        {
+            if (imagePath is not null)
+            {
+                throw new ArgumentException("Image path cannot be provided with --generate.");
+            }
+
+            if (pointsPath is not null || imcheckTextPath is not null)
+            {
+                throw new ArgumentException("--points and --imcheck-out are not supported with --generate.");
+            }
+
+            if (sampleSizeWasProvided || samplingPixelsPerInch != 301.1)
+            {
+                throw new ArgumentException("--sample-size and --sampling are only supported when measuring images.");
+            }
+
+            if (dpi <= 0)
+            {
+                throw new ArgumentException("--dpi must be positive.");
+            }
+
+            return new CliOptions(imagePath, target, generateTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi);
+        }
+
         if (imagePath is null)
         {
             throw new ArgumentException("Image path is required.");
@@ -151,12 +266,22 @@ internal sealed record CliOptions(
             throw new FileNotFoundException("Points file was not found.", pointsPath);
         }
 
+        if (target == MeasurementTarget.Qa62 && pointsPath is not null)
+        {
+            throw new ArgumentException("--points is only supported with --target q13.");
+        }
+
         if (sampleSize <= 0 || sampleSize % 2 == 0)
         {
             throw new ArgumentException("--sample-size must be a positive odd integer.");
         }
 
-        return new CliOptions(imagePath, pointsPath, csvPath, imcheckTextPath, sampleSize);
+        if (samplingPixelsPerInch <= 0)
+        {
+            throw new ArgumentException("--sampling must be positive.");
+        }
+
+        return new CliOptions(imagePath, target, generateTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi);
     }
 
     private static string RequiredValue(string[] args, ref int index, string optionName)
@@ -169,4 +294,15 @@ internal sealed record CliOptions(
         index++;
         return args[index];
     }
+}
+
+internal enum MeasurementTarget
+{
+    Q13,
+    Qa62
+}
+
+internal enum GenerationTarget
+{
+    Qa62
 }
