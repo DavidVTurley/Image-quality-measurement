@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using OpenCvSharp;
 
-namespace Imcheck.Measurement.Metamorfoze;
+namespace Imcheck.Measurement.Uniformity;
 
 public sealed class MetamorfozeWhiteSheetAnalyzer
 {

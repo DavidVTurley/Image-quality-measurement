@@ -1,4 +1,4 @@
-namespace Imcheck.Measurement.Metamorfoze;
+namespace Imcheck.Measurement.Uniformity;
 
 public static class MetamorfozeTolerances
 {

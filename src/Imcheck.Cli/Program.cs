@@ -1,5 +1,5 @@
 using Imcheck.Measurement;
-using Imcheck.Measurement.Metamorfoze;
+using Imcheck.Measurement.Uniformity;
 
 return await RunAsync(args);
 
