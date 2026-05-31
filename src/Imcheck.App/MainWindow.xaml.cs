@@ -1,5 +1,6 @@
 using Imcheck.Measurement.Meaasurements.Q13;
 using Imcheck.Measurement.Meaasurements.Uniformity;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -31,10 +32,16 @@ public partial class MainWindow : Window
 
     private static BitmapImage LoadBitmap(string path)
     {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        memory.Position = 0;
+
         var bitmap = new BitmapImage();
         bitmap.BeginInit();
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.UriSource = new Uri(path);
+        bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+        bitmap.StreamSource = memory;
         bitmap.EndInit();
         bitmap.Freeze();
         return bitmap;
