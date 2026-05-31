@@ -5,109 +5,193 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Imcheck.App"
         mc:Ignorable="d"
-        Title="Imcheck Q-13 Remaker" Height="760" Width="1180" MinHeight="620" MinWidth="980">
+        Title="Imcheck Remaker" Height="760" Width="1180" MinHeight="620" MinWidth="980">
     <Grid Background="#F5F6F8">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="0,0,0,1">
-            <DockPanel Margin="16,12">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button x:Name="OpenButton" Width="112" Height="34" Margin="0,0,8,0" Click="OpenButton_Click">Open Image</Button>
-                    <Button x:Name="LoadPointsButton" Width="132" Height="34" Margin="0,0,8,0" Click="LoadPointsButton_Click">Load Points CSV</Button>
-                    <Button x:Name="ClearPointsButton" Width="112" Height="34" Margin="0,0,8,0" Click="ClearPointsButton_Click" IsEnabled="False">Clear Points</Button>
-                    <Button x:Name="ExportButton" Width="112" Height="34" Click="ExportButton_Click" IsEnabled="False">Export CSV</Button>
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock Text="Kodak Q-13 Measurement" FontSize="18" FontWeight="SemiBold" Foreground="#172033" />
-                    <TextBlock x:Name="FileNameText" Text="No image loaded" Margin="0,3,0,0" Foreground="#5B6472" />
-                </StackPanel>
-            </DockPanel>
-        </Border>
-
-        <Grid Grid.Row="1" Margin="16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="360" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
-                <Grid Margin="12">
+        <TabControl Margin="12">
+            <TabItem Header="Q13">
+                <Grid Background="#F5F6F8">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="220" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Image Preview" FontWeight="SemiBold" Foreground="#172033" />
-                    <Border Grid.Row="1" Margin="0,10,0,14" Background="#ECEFF4" BorderBrush="#D9DEE7" BorderThickness="1">
-                        <Image x:Name="PreviewImage" Stretch="Uniform" />
+
+                    <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="0,0,0,1">
+                        <DockPanel Margin="16,12">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button x:Name="Q13OpenButton" Width="112" Height="34" Margin="0,0,8,0" Click="Q13OpenButton_Click">Open Image</Button>
+                                <Button x:Name="Q13LoadPointsButton" Width="132" Height="34" Margin="0,0,8,0" Click="Q13LoadPointsButton_Click">Load Points CSV</Button>
+                                <Button x:Name="Q13ClearPointsButton" Width="112" Height="34" Margin="0,0,8,0" Click="Q13ClearPointsButton_Click" IsEnabled="False">Clear Points</Button>
+                                <Button x:Name="Q13ExportButton" Width="112" Height="34" Click="Q13ExportButton_Click" IsEnabled="False">Export CSV</Button>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Kodak Q-13 Measurement" FontSize="18" FontWeight="SemiBold" Foreground="#172033" />
+                                <TextBlock x:Name="Q13FileNameText" Text="No image loaded" Margin="0,3,0,0" Foreground="#5B6472" />
+                            </StackPanel>
+                        </DockPanel>
                     </Border>
-                    <TextBlock Grid.Row="2" Text="Measurement Summary" FontWeight="SemiBold" Foreground="#172033" />
-                    <Grid Grid.Row="3" Margin="0,10,0,0">
+
+                    <Grid Grid.Row="1" Margin="16">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="360" />
+                            <ColumnDefinition Width="16" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="30" />
-                            <RowDefinition Height="30" />
-                            <RowDefinition Height="30" />
-                            <RowDefinition Height="30" />
-                        </Grid.RowDefinitions>
-                        <TextBlock Text="Sampling" Foreground="#5B6472" />
-                        <TextBlock x:Name="SamplingText" Grid.Column="1" Text="-" />
-                        <TextBlock Grid.Row="1" Text="Sample N" Foreground="#5B6472" />
-                        <TextBlock x:Name="SampleSizeText" Grid.Row="1" Grid.Column="1" Text="-" />
-                        <TextBlock Grid.Row="2" Text="1/gamma" Foreground="#5B6472" />
-                        <TextBlock x:Name="GammaText" Grid.Row="2" Grid.Column="1" Text="-" />
-                        <TextBlock Grid.Row="3" Text="Patch count" Foreground="#5B6472" />
-                        <TextBlock x:Name="PatchCountText" Grid.Row="3" Grid.Column="1" Text="-" />
+
+                        <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
+                            <Grid Margin="12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="220" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Image Preview" FontWeight="SemiBold" Foreground="#172033" />
+                                <Border Grid.Row="1" Margin="0,10,0,14" Background="#ECEFF4" BorderBrush="#D9DEE7" BorderThickness="1">
+                                    <Image x:Name="Q13PreviewImage" Stretch="Uniform" />
+                                </Border>
+                                <TextBlock Grid.Row="2" Text="Measurement Summary" FontWeight="SemiBold" Foreground="#172033" />
+                                <Grid Grid.Row="3" Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Sampling" Foreground="#5B6472" />
+                                    <TextBlock x:Name="Q13SamplingText" Grid.Column="1" Text="-" />
+                                    <TextBlock Grid.Row="1" Text="Sample N" Foreground="#5B6472" />
+                                    <TextBlock x:Name="Q13SampleSizeText" Grid.Row="1" Grid.Column="1" Text="-" />
+                                    <TextBlock Grid.Row="2" Text="1/gamma" Foreground="#5B6472" />
+                                    <TextBlock x:Name="Q13GammaText" Grid.Row="2" Grid.Column="1" Text="-" />
+                                    <TextBlock Grid.Row="3" Text="Patch count" Foreground="#5B6472" />
+                                    <TextBlock x:Name="Q13PatchCountText" Grid.Row="3" Grid.Column="1" Text="-" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
+                            <Grid Margin="12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Input, Output, RMS Noise" FontWeight="SemiBold" Foreground="#172033" />
+                                <DataGrid x:Name="Q13ResultsGrid"
+                                          Grid.Row="1"
+                                          Margin="0,10,0,0"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          IsReadOnly="True"
+                                          HeadersVisibility="Column"
+                                          GridLinesVisibility="Horizontal"
+                                          AlternatingRowBackground="#F8FAFC" />
+                            </Grid>
+                        </Border>
                     </Grid>
                 </Grid>
-            </Border>
+            </TabItem>
 
-            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
-                <Grid Margin="12">
+            <TabItem Header="Uniformity">
+                <Grid Background="#F5F6F8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Input, Output, RMS Noise" FontWeight="SemiBold" Foreground="#172033" />
-                    <DataGrid x:Name="ResultsGrid"
-                              Grid.Row="1"
-                              Margin="0,10,0,0"
-                              AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              CanUserDeleteRows="False"
-                              IsReadOnly="True"
-                              HeadersVisibility="Column"
-                              GridLinesVisibility="Horizontal"
-                              AlternatingRowBackground="#F8FAFC">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Patch" Binding="{Binding Index}" Width="64" />
-                            <DataGridTextColumn Header="Center X" Binding="{Binding SampleCenterX, StringFormat=0.##}" Width="*" />
-                            <DataGridTextColumn Header="Center Y" Binding="{Binding SampleCenterY, StringFormat=0.##}" Width="*" />
-                            <DataGridTextColumn Header="Input R" Binding="{Binding InputRed, StringFormat=0.0000}" Width="*" />
-                            <DataGridTextColumn Header="Input G" Binding="{Binding InputGreen, StringFormat=0.0000}" Width="*" />
-                            <DataGridTextColumn Header="Input B" Binding="{Binding InputBlue, StringFormat=0.0000}" Width="*" />
-                            <DataGridTextColumn Header="Output R" Binding="{Binding OutputRed, StringFormat=0.####}" Width="*" />
-                            <DataGridTextColumn Header="Output G" Binding="{Binding OutputGreen, StringFormat=0.####}" Width="*" />
-                            <DataGridTextColumn Header="Output B" Binding="{Binding OutputBlue, StringFormat=0.####}" Width="*" />
-                            <DataGridTextColumn Header="Noise R" Binding="{Binding NoiseRed, StringFormat=0.####}" Width="*" />
-                            <DataGridTextColumn Header="Noise G" Binding="{Binding NoiseGreen, StringFormat=0.####}" Width="*" />
-                            <DataGridTextColumn Header="Noise B" Binding="{Binding NoiseBlue, StringFormat=0.####}" Width="*" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
-        </Grid>
 
-        <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="0,1,0,0">
+                    <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="0,0,0,1">
+                        <DockPanel Margin="16,12">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button x:Name="UniformityOpenButton" Width="112" Height="34" Margin="0,0,8,0" Click="UniformityOpenButton_Click">Open Image</Button>
+                                <Button x:Name="UniformityExportButton" Width="112" Height="34" Click="UniformityExportButton_Click" IsEnabled="False">Export CSV</Button>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Uniformity Measurement" FontSize="18" FontWeight="SemiBold" Foreground="#172033" />
+                                <TextBlock x:Name="UniformityFileNameText" Text="No image loaded" Margin="0,3,0,0" Foreground="#5B6472" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1" Margin="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="360" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
+                            <Grid Margin="12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="220" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Image Preview" FontWeight="SemiBold" Foreground="#172033" />
+                                <Border Grid.Row="1" Margin="0,10,0,14" Background="#ECEFF4" BorderBrush="#D9DEE7" BorderThickness="1">
+                                    <Grid x:Name="UniformityPreviewHost" SizeChanged="UniformityPreviewHost_SizeChanged" ClipToBounds="True">
+                                        <Image x:Name="UniformityPreviewImage" Stretch="Uniform" />
+                                        <Canvas x:Name="UniformityOverlayCanvas" IsHitTestVisible="False" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock Grid.Row="2" Text="Measurement Summary" FontWeight="SemiBold" Foreground="#172033" />
+                                <Grid Grid.Row="3" Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Image" Foreground="#5B6472" />
+                                    <TextBlock x:Name="UniformityImageText" Grid.Column="1" Text="-" />
+                                    <TextBlock Grid.Row="1" Text="Sample size" Foreground="#5B6472" />
+                                    <TextBlock x:Name="UniformitySampleSizeText" Grid.Row="1" Grid.Column="1" Text="-" />
+                                    <TextBlock Grid.Row="2" Text="Max delta L*" Foreground="#5B6472" />
+                                    <TextBlock x:Name="UniformityDeltaLText" Grid.Row="2" Grid.Column="1" Text="-" />
+                                    <TextBlock Grid.Row="3" Text="Max delta Eab" Foreground="#5B6472" />
+                                    <TextBlock x:Name="UniformityDeltaEText" Grid.Row="3" Grid.Column="1" Text="-" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
+                            <Grid Margin="12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Uniformity Samples" FontWeight="SemiBold" Foreground="#172033" />
+                                <DataGrid x:Name="UniformityResultsGrid"
+                                          Grid.Row="1"
+                                          Margin="0,10,0,0"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          IsReadOnly="True"
+                                          HeadersVisibility="Column"
+                                          GridLinesVisibility="Horizontal"
+                                          AlternatingRowBackground="#F8FAFC" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="0,1,0,0">
             <TextBlock x:Name="StatusText" Margin="16,9" Foreground="#5B6472" Text="Ready" />
         </Border>
     </Grid>
