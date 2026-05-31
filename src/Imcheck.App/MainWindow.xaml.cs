@@ -40,7 +40,7 @@ public partial class MainWindow : Window
         var bitmap = new BitmapImage();
         bitmap.BeginInit();
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+        // A fresh stream bypasses WPF's URI cache; IgnoreImageCache is only safe for URI-backed images.
         bitmap.StreamSource = memory;
         bitmap.EndInit();
         bitmap.Freeze();
