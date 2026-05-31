@@ -2,6 +2,10 @@ using Imcheck.Measurement.Meaasurements.Q13;
 using Microsoft.Win32;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using IOPath = System.IO.Path;
 
 namespace Imcheck.App;
@@ -80,6 +84,11 @@ public partial class MainWindow
         }
     }
 
+    private void Q13PreviewHost_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        DrawQ13Overlay();
+    }
+
     private async void Q13ExportButton_Click(object sender, RoutedEventArgs e)
     {
         if (_currentQ13Result is null)
@@ -119,8 +128,46 @@ public partial class MainWindow
         Q13GammaText.Text = result.InverseGamma.ToString("0.00", CultureInfo.InvariantCulture);
         Q13PatchCountText.Text = result.Patches.Count.ToString(CultureInfo.InvariantCulture);
         Q13ExportButton.IsEnabled = true;
+        DrawQ13Overlay();
         StatusText.Text = _q13SampleCenters is null
             ? "Q13 measurement complete using automatic straight-line centers."
             : "Q13 measurement complete using explicit sample centers.";
+    }
+
+    private void DrawQ13Overlay()
+    {
+        Q13OverlayCanvas.Children.Clear();
+        if (_currentQ13Result is null || Q13PreviewImage.Source is not BitmapSource bitmap)
+        {
+            return;
+        }
+
+        var transform = ImageDisplayTransform(
+            Q13PreviewHost.ActualWidth,
+            Q13PreviewHost.ActualHeight,
+            bitmap.PixelWidth,
+            bitmap.PixelHeight);
+
+        if (transform is null)
+        {
+            return;
+        }
+
+        var (displayedWidth, displayedHeight, offsetX, offsetY) = transform.Value;
+        foreach (var patch in _currentQ13Result.Patches)
+        {
+            var rectangle = new Rectangle
+            {
+                Width = patch.SampleSize / (double)bitmap.PixelWidth * displayedWidth,
+                Height = patch.SampleSize / (double)bitmap.PixelHeight * displayedHeight,
+                Stroke = Brushes.Red,
+                StrokeThickness = 2,
+                Fill = Brushes.Transparent
+            };
+
+            Canvas.SetLeft(rectangle, offsetX + patch.SampleX / (double)bitmap.PixelWidth * displayedWidth);
+            Canvas.SetTop(rectangle, offsetY + patch.SampleY / (double)bitmap.PixelHeight * displayedHeight);
+            Q13OverlayCanvas.Children.Add(rectangle);
+        }
     }
 }

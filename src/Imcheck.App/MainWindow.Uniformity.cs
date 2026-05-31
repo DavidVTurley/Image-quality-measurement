@@ -97,35 +97,18 @@ public partial class MainWindow
             return;
         }
 
-        var hostWidth = UniformityPreviewHost.ActualWidth;
-        var hostHeight = UniformityPreviewHost.ActualHeight;
-        if (hostWidth <= 0 || hostHeight <= 0 || bitmap.PixelWidth <= 0 || bitmap.PixelHeight <= 0)
+        var transform = ImageDisplayTransform(
+            UniformityPreviewHost.ActualWidth,
+            UniformityPreviewHost.ActualHeight,
+            bitmap.PixelWidth,
+            bitmap.PixelHeight);
+
+        if (transform is null)
         {
             return;
         }
 
-        var imageAspect = bitmap.PixelWidth / (double)bitmap.PixelHeight;
-        var hostAspect = hostWidth / hostHeight;
-        double displayedWidth;
-        double displayedHeight;
-        double offsetX;
-        double offsetY;
-
-        if (hostAspect > imageAspect)
-        {
-            displayedHeight = hostHeight;
-            displayedWidth = displayedHeight * imageAspect;
-            offsetX = (hostWidth - displayedWidth) / 2.0;
-            offsetY = 0;
-        }
-        else
-        {
-            displayedWidth = hostWidth;
-            displayedHeight = displayedWidth / imageAspect;
-            offsetX = 0;
-            offsetY = (hostHeight - displayedHeight) / 2.0;
-        }
-
+        var (displayedWidth, displayedHeight, offsetX, offsetY) = transform.Value;
         foreach (var sample in _currentUniformityResult.Samples)
         {
             var rectangle = new Rectangle

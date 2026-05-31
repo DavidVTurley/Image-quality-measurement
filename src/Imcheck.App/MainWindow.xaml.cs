@@ -34,6 +34,32 @@ public partial class MainWindow : Window
         return bitmap;
     }
 
+    private static (double DisplayedWidth, double DisplayedHeight, double OffsetX, double OffsetY)? ImageDisplayTransform(
+        double hostWidth,
+        double hostHeight,
+        int imageWidth,
+        int imageHeight)
+    {
+        if (hostWidth <= 0 || hostHeight <= 0 || imageWidth <= 0 || imageHeight <= 0)
+        {
+            return null;
+        }
+
+        var imageAspect = imageWidth / (double)imageHeight;
+        var hostAspect = hostWidth / hostHeight;
+
+        if (hostAspect > imageAspect)
+        {
+            var displayedHeight = hostHeight;
+            var displayedWidth = displayedHeight * imageAspect;
+            return (displayedWidth, displayedHeight, (hostWidth - displayedWidth) / 2.0, 0);
+        }
+
+        var fittedWidth = hostWidth;
+        var fittedHeight = fittedWidth / imageAspect;
+        return (fittedWidth, fittedHeight, 0, (hostHeight - fittedHeight) / 2.0);
+    }
+
     private void ConfigureQ13Columns()
     {
         Q13ResultsGrid.Columns.Clear();
