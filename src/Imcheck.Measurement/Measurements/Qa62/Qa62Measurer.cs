@@ -1,8 +1,8 @@
 using System.Numerics;
-using Imcheck.Measurement.Meaasurements.Common;
+using Imcheck.Measurement.Measurements.Common;
 using OpenCvSharp;
 
-namespace Imcheck.Measurement.Meaasurements.Qa62;
+namespace Imcheck.Measurement.Measurements.Qa62;
 
 public sealed class Qa62Measurer
 {

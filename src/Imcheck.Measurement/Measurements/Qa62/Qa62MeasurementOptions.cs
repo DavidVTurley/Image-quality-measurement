@@ -1,4 +1,4 @@
-namespace Imcheck.Measurement.Meaasurements.Qa62;
+namespace Imcheck.Measurement.Measurements.Qa62;
 
 public sealed record Qa62MeasurementOptions
 {

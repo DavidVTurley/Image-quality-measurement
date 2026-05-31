@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text;
-using Imcheck.Measurement.Meaasurements.Common;
+using Imcheck.Measurement.Measurements.Common;
 using OpenCvSharp;
 
-namespace Imcheck.Measurement.Meaasurements.Uniformity;
+namespace Imcheck.Measurement.Measurements.Uniformity;
 
 public sealed class UniformityAnalyzer
 {

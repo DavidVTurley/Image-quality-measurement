@@ -1,4 +1,4 @@
-using Imcheck.Measurement.Meaasurements.Uniformity;
+using Imcheck.Measurement.Measurements.Uniformity;
 using Microsoft.Win32;
 using System.Globalization;
 using System.IO;

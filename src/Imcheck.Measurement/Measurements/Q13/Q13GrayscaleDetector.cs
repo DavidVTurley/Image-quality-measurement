@@ -1,7 +1,7 @@
-using Imcheck.Measurement.Meaasurements.Common;
+using Imcheck.Measurement.Measurements.Common;
 using OpenCvSharp;
 
-namespace Imcheck.Measurement.Meaasurements.Q13;
+namespace Imcheck.Measurement.Measurements.Q13;
 
 public sealed class Q13GrayscaleDetector
 {

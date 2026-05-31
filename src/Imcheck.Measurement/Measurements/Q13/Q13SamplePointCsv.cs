@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Imcheck.Measurement.Meaasurements.Q13;
+namespace Imcheck.Measurement.Measurements.Q13;
 
 public static class Q13SamplePointCsv
 {

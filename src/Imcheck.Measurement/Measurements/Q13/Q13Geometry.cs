@@ -1,6 +1,6 @@
 using OpenCvSharp;
 
-namespace Imcheck.Measurement.Meaasurements.Q13;
+namespace Imcheck.Measurement.Measurements.Q13;
 
 public sealed record Q13Point(double X, double Y)
 {

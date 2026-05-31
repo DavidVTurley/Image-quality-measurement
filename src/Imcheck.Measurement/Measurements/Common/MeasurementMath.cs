@@ -1,4 +1,4 @@
-namespace Imcheck.Measurement.Meaasurements.Common;
+namespace Imcheck.Measurement.Measurements.Common;
 
 internal static class MeasurementMath
 {

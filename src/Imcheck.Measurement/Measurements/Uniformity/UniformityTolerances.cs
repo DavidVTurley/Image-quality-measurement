@@ -1,4 +1,4 @@
-namespace Imcheck.Measurement.Meaasurements.Uniformity;
+namespace Imcheck.Measurement.Measurements.Uniformity;
 
 public static class UniformityTolerances
 {

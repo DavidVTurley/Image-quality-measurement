@@ -1,5 +1,5 @@
-using Imcheck.Measurement.Meaasurements.Q13;
-using Imcheck.Measurement.Meaasurements.Uniformity;
+using Imcheck.Measurement.Measurements.Q13;
+using Imcheck.Measurement.Measurements.Uniformity;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;

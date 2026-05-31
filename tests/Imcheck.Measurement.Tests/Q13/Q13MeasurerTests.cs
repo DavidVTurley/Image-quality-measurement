@@ -1,4 +1,4 @@
-using Imcheck.Measurement.Meaasurements.Q13;
+using Imcheck.Measurement.Measurements.Q13;
 
 namespace Imcheck.Measurement.Tests;
 

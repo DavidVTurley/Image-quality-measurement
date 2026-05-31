@@ -1,7 +1,7 @@
 using Imcheck.Measurement;
-using Imcheck.Measurement.Meaasurements.Q13;
-using Imcheck.Measurement.Meaasurements.Qa62;
-using Imcheck.Measurement.Meaasurements.Uniformity;
+using Imcheck.Measurement.Measurements.Q13;
+using Imcheck.Measurement.Measurements.Qa62;
+using Imcheck.Measurement.Measurements.Uniformity;
 
 return await RunAsync(args);
 
