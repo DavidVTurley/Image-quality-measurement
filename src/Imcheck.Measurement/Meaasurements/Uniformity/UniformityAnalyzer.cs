@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Imcheck.Measurement.Meaasurements.Common;
 using OpenCvSharp;
 
 namespace Imcheck.Measurement.Meaasurements.Uniformity;
@@ -85,7 +86,7 @@ public sealed class UniformityAnalyzer
         var cellHeight = image.Height / 3.0;
         var centerX = (point.Column + 0.5) * cellWidth - 0.5;
         var centerY = (point.Row + 0.5) * cellHeight - 0.5;
-        var rect = SampleRect(image.Width, image.Height, sampleSize, centerX, centerY);
+        var rect = MeasurementGeometry.CenteredSquare(image.Width, image.Height, sampleSize, centerX, centerY);
         using var roi = new Mat(image, rect);
 
         var pixels = rect.Width * rect.Height;
@@ -148,13 +149,6 @@ public sealed class UniformityAnalyzer
         return (widePixel.Item2, widePixel.Item1, widePixel.Item0);
     }
 
-    private static Rect SampleRect(int width, int height, int sampleSize, double centerX, double centerY)
-    {
-        var x = Clamp((int)Math.Round(centerX - sampleSize / 2.0), 0, width - sampleSize);
-        var y = Clamp((int)Math.Round(centerY - sampleSize / 2.0), 0, height - sampleSize);
-        return new Rect(x, y, sampleSize, sampleSize);
-    }
-
     private static double DeltaEab(WhiteSheetSampleMeasurement first, WhiteSheetSampleMeasurement second)
     {
         var deltaA = first.AStar - second.AStar;
@@ -196,15 +190,10 @@ public sealed class UniformityAnalyzer
         var sampleSize = (int)Math.Round(Math.Min(cellWidth, cellHeight) * DefaultCellCoverage);
         if (sampleSize % 2 == 0)
         {
-            sampleSize++;
+            sampleSize = MeasurementMath.MakeOdd(sampleSize);
         }
 
         return Math.Max(MinimumSampleSize, sampleSize);
-    }
-
-    private static int Clamp(int value, int min, int max)
-    {
-        return Math.Min(Math.Max(value, min), max);
     }
 
     private sealed record WhiteSheetSamplePoint(string Name, int Column, int Row);

@@ -1,3 +1,4 @@
+using Imcheck.Measurement.Meaasurements.Common;
 using OpenCvSharp;
 
 namespace Imcheck.Measurement.Meaasurements.Q13;
@@ -162,7 +163,7 @@ public sealed class Q13GrayscaleDetector
         {
             var centerX = (index + 0.5) * stripWidth / PatchCount;
             var centerY = stripHeight / 2.0;
-            var rect = SampleRect(stripWidth, stripHeight, sampleSize, centerX, centerY);
+            var rect = MeasurementGeometry.CenteredSquare(stripWidth, stripHeight, sampleSize, centerX, centerY);
             using var roi = new Mat(warped, rect);
             var mean = Cv2.Mean(roi);
             var luminance = (mean.Val2 + mean.Val1 + mean.Val0) / 3.0;
@@ -325,13 +326,6 @@ public sealed class Q13GrayscaleDetector
 
         Cv2.CvtColor(image, bgr, ColorConversionCodes.BGRA2BGR);
         return bgr;
-    }
-
-    private static Rect SampleRect(int width, int height, int sampleSize, double centerX, double centerY)
-    {
-        var x = Math.Clamp((int)Math.Round(centerX - sampleSize / 2.0), 0, width - sampleSize);
-        var y = Math.Clamp((int)Math.Round(centerY - sampleSize / 2.0), 0, height - sampleSize);
-        return new Rect(x, y, sampleSize, sampleSize);
     }
 
     private static double Distance(Q13Point first, Q13Point second)

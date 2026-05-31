@@ -1,4 +1,5 @@
 using System.Numerics;
+using Imcheck.Measurement.Meaasurements.Common;
 using OpenCvSharp;
 
 namespace Imcheck.Measurement.Meaasurements.Qa62;
@@ -80,12 +81,12 @@ public sealed class Qa62Measurer
         {
             var centerX = bounds.X + PatchCenters[i].X * bounds.Width;
             var centerY = bounds.Y + PatchCenters[i].Y * bounds.Height;
-            var rect = GetSampleRectFromCenter(image.Width, image.Height, sampleSize, centerX, centerY);
+            var rect = MeasurementGeometry.CenteredSquare(image.Width, image.Height, sampleSize, centerX, centerY);
             using var roi = new Mat(image, rect);
 
             if (channels == 1)
             {
-                var (mean, noise) = MeanAndPopulationStdDev(roi);
+                var (mean, noise) = ImageStatistics.MeanAndPopulationStdDev(roi);
                 patches.Add(new Qa62PatchMeasurement(
                     i + 1,
                     mean,
@@ -105,9 +106,9 @@ public sealed class Qa62Measurer
             Cv2.Split(roi, out var splitChannels);
             try
             {
-                var (blueMean, blueNoise) = MeanAndPopulationStdDev(splitChannels[0]);
-                var (greenMean, greenNoise) = MeanAndPopulationStdDev(splitChannels[1]);
-                var (redMean, redNoise) = MeanAndPopulationStdDev(splitChannels[2]);
+                var (blueMean, blueNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[0]);
+                var (greenMean, greenNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[1]);
+                var (redMean, redNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[2]);
                 patches.Add(new Qa62PatchMeasurement(
                     i + 1,
                     redMean,
@@ -534,24 +535,11 @@ public sealed class Qa62Measurer
 
     private static Rect ToRect(int imageWidth, int imageHeight, Qa62TargetBounds bounds, NormalizedRect normalizedRect)
     {
-        var x = Clamp((int)Math.Round(bounds.X + normalizedRect.X * bounds.Width), 0, imageWidth - 1);
-        var y = Clamp((int)Math.Round(bounds.Y + normalizedRect.Y * bounds.Height), 0, imageHeight - 1);
-        var width = Clamp((int)Math.Round(normalizedRect.Width * bounds.Width), 1, imageWidth - x);
-        var height = Clamp((int)Math.Round(normalizedRect.Height * bounds.Height), 1, imageHeight - y);
+        var x = MeasurementMath.Clamp((int)Math.Round(bounds.X + normalizedRect.X * bounds.Width), 0, imageWidth - 1);
+        var y = MeasurementMath.Clamp((int)Math.Round(bounds.Y + normalizedRect.Y * bounds.Height), 0, imageHeight - 1);
+        var width = MeasurementMath.Clamp((int)Math.Round(normalizedRect.Width * bounds.Width), 1, imageWidth - x);
+        var height = MeasurementMath.Clamp((int)Math.Round(normalizedRect.Height * bounds.Height), 1, imageHeight - y);
         return new Rect(x, y, width, height);
-    }
-
-    private static Rect GetSampleRectFromCenter(int width, int height, int sampleSize, double centerX, double centerY)
-    {
-        var x = Clamp((int)Math.Round(centerX - sampleSize / 2.0), 0, width - sampleSize);
-        var y = Clamp((int)Math.Round(centerY - sampleSize / 2.0), 0, height - sampleSize);
-        return new Rect(x, y, sampleSize, sampleSize);
-    }
-
-    private static (double Mean, double StdDev) MeanAndPopulationStdDev(Mat mat)
-    {
-        Cv2.MeanStdDev(mat, out var mean, out var stdDev);
-        return (mean.Val0, stdDev.Val0);
     }
 
     private static int AutoPatchSampleSize(Qa62TargetBounds bounds)
@@ -576,11 +564,6 @@ public sealed class Qa62Measurer
         {
             throw new ArgumentOutOfRangeException(nameof(samplingPixelsPerInch), "Sampling must be positive.");
         }
-    }
-
-    private static int Clamp(int value, int min, int max)
-    {
-        return Math.Min(Math.Max(value, min), max);
     }
 
     private sealed record EdgeProfile(

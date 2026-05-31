@@ -1,3 +1,4 @@
+using Imcheck.Measurement.Meaasurements.Common;
 using OpenCvSharp;
 
 namespace Imcheck.Measurement.Meaasurements.Q13;
@@ -46,7 +47,7 @@ public sealed class Q13Measurer
         {
             var target = targets[patchIndex];
             var center = sampleCenters[patchIndex];
-            var rect = GetSampleRectFromCenter(image.Width, image.Height, sampleSize, center.X, center.Y);
+            var rect = MeasurementGeometry.CenteredSquare(image.Width, image.Height, sampleSize, center.X, center.Y);
             using var roi = new Mat(image, rect);
             patches.Add(MeasurePatch(roi, target, patchIndex, channels, center.X, center.Y, rect));
         }
@@ -135,19 +136,11 @@ public sealed class Q13Measurer
             .ToArray();
     }
 
-    private static Rect GetSampleRectFromCenter(int width, int height, int sampleSize, double centerX, double centerY)
-    {
-        var x = Clamp((int)Math.Round(centerX - sampleSize / 2.0), 0, width - sampleSize);
-        var y = Clamp((int)Math.Round(centerY - sampleSize / 2.0), 0, height - sampleSize);
-
-        return new Rect(x, y, sampleSize, sampleSize);
-    }
-
     private static PatchMeasurement MeasurePatch(Mat roi, Q13TargetPatch target, int patchIndex, int channels, double centerX, double centerY, Rect rect)
     {
         if (channels == 1)
         {
-            var (mean, noise) = MeanAndPopulationStdDev(roi);
+            var (mean, noise) = ImageStatistics.MeanAndPopulationStdDev(roi);
             return new PatchMeasurement(
                 patchIndex,
                 target.InputRed,
@@ -170,9 +163,9 @@ public sealed class Q13Measurer
         Cv2.Split(roi, out var splitChannels);
         try
         {
-            var (blueMean, blueNoise) = MeanAndPopulationStdDev(splitChannels[0]);
-            var (greenMean, greenNoise) = MeanAndPopulationStdDev(splitChannels[1]);
-            var (redMean, redNoise) = MeanAndPopulationStdDev(splitChannels[2]);
+            var (blueMean, blueNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[0]);
+            var (greenMean, greenNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[1]);
+            var (redMean, redNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[2]);
 
             return new PatchMeasurement(
                 patchIndex,
@@ -227,10 +220,10 @@ public sealed class Q13Measurer
 
         foreach (var region in regions)
         {
-            var sampleSize = Math.Max(1, MakeOdd((int)Math.Round(region.Size * stripHeight)));
+            var sampleSize = Math.Max(1, MeasurementMath.MakeOdd((int)Math.Round(region.Size * stripHeight)));
             var centerX = region.CenterX * stripWidth;
             var centerY = region.CenterY * stripHeight;
-            var rect = GetSampleRectFromCenter(stripWidth, stripHeight, sampleSize, centerX, centerY);
+            var rect = MeasurementGeometry.CenteredSquare(stripWidth, stripHeight, sampleSize, centerX, centerY);
             using var roi = new Mat(warped, rect);
             patches.Add(MeasurePatch(roi, targets[region.PatchIndex], region.PatchIndex, channels, centerX, centerY, rect));
         }
@@ -243,12 +236,6 @@ public sealed class Q13Measurer
             CalculateInverseGamma(patches, channel: 1),
             CalculateInverseGamma(patches, channel: 2),
             patches);
-    }
-
-    private static (double Mean, double StdDev) MeanAndPopulationStdDev(Mat mat)
-    {
-        Cv2.MeanStdDev(mat, out var mean, out var stdDev);
-        return (mean.Val0, stdDev.Val0);
     }
 
     private static double CalculateInverseGamma(IReadOnlyList<PatchMeasurement> patches, int channel)
@@ -299,13 +286,4 @@ public sealed class Q13Measurer
         return imageWidth / 8.0 * 300.0 / 297.0;
     }
 
-    private static int Clamp(int value, int min, int max)
-    {
-        return Math.Min(Math.Max(value, min), max);
-    }
-
-    private static int MakeOdd(int value)
-    {
-        return value % 2 == 0 ? value + 1 : value;
-    }
 }
