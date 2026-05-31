@@ -10,11 +10,17 @@ namespace Imcheck.App;
 public partial class MainWindow : Window
 {
     private readonly Q13Measurer _q13Measurer = new();
+    private readonly Q13GrayscaleDetector _q13Detector = new();
     private readonly UniformityAnalyzer _uniformityAnalyzer = new();
 
     private Q13MeasurementResult? _currentQ13Result;
     private UniformityAnalysisResult? _currentUniformityResult;
     private IReadOnlyList<Q13SamplePoint>? _q13SampleCenters;
+    private string? _pendingQ13ImagePath;
+    private Q13StripGeometry? _pendingQ13Geometry;
+    private List<Q13SampleRegion> _pendingQ13Regions = [];
+    private Q13StripGeometry? _acceptedQ13Geometry;
+    private List<Q13SampleRegion>? _acceptedQ13Regions;
 
     public MainWindow()
     {

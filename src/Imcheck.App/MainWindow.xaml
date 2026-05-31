@@ -36,68 +36,102 @@
                     </Border>
 
                     <Grid Grid.Row="1" Margin="16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="360" />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                        <Grid x:Name="Q13ResultsView">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="360" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
+                            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
+                                <Grid Margin="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="220" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Image Preview" FontWeight="SemiBold" Foreground="#172033" />
+                                    <Border Grid.Row="1" Margin="0,10,0,14" Background="#ECEFF4" BorderBrush="#D9DEE7" BorderThickness="1">
+                                        <Grid x:Name="Q13PreviewHost" SizeChanged="Q13PreviewHost_SizeChanged" ClipToBounds="True">
+                                            <Image x:Name="Q13PreviewImage" Stretch="Uniform" />
+                                            <Canvas x:Name="Q13OverlayCanvas" IsHitTestVisible="False" />
+                                        </Grid>
+                                    </Border>
+                                    <TextBlock Grid.Row="2" Text="Measurement Summary" FontWeight="SemiBold" Foreground="#172033" />
+                                    <Grid Grid.Row="3" Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="30" />
+                                            <RowDefinition Height="30" />
+                                            <RowDefinition Height="30" />
+                                            <RowDefinition Height="30" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="Sampling" Foreground="#5B6472" />
+                                        <TextBlock x:Name="Q13SamplingText" Grid.Column="1" Text="-" />
+                                        <TextBlock Grid.Row="1" Text="Sample N" Foreground="#5B6472" />
+                                        <TextBlock x:Name="Q13SampleSizeText" Grid.Row="1" Grid.Column="1" Text="-" />
+                                        <TextBlock Grid.Row="2" Text="1/gamma" Foreground="#5B6472" />
+                                        <TextBlock x:Name="Q13GammaText" Grid.Row="2" Grid.Column="1" Text="-" />
+                                        <TextBlock Grid.Row="3" Text="Patch count" Foreground="#5B6472" />
+                                        <TextBlock x:Name="Q13PatchCountText" Grid.Row="3" Grid.Column="1" Text="-" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
+                                <Grid Margin="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Input, Output, RMS Noise" FontWeight="SemiBold" Foreground="#172033" />
+                                    <DataGrid x:Name="Q13ResultsGrid"
+                                              Grid.Row="1"
+                                              Margin="0,10,0,0"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              CanUserDeleteRows="False"
+                                              IsReadOnly="True"
+                                              HeadersVisibility="Column"
+                                              GridLinesVisibility="Horizontal"
+                                              AlternatingRowBackground="#F8FAFC" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <Border x:Name="Q13PlacementEditor" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6" Visibility="Collapsed">
                             <Grid Margin="12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="220" />
-                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="Image Preview" FontWeight="SemiBold" Foreground="#172033" />
-                                <Border Grid.Row="1" Margin="0,10,0,14" Background="#ECEFF4" BorderBrush="#D9DEE7" BorderThickness="1">
-                                    <Grid x:Name="Q13PreviewHost" SizeChanged="Q13PreviewHost_SizeChanged" ClipToBounds="True">
-                                        <Image x:Name="Q13PreviewImage" Stretch="Uniform" />
-                                        <Canvas x:Name="Q13OverlayCanvas" IsHitTestVisible="False" />
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <Button x:Name="Q13AcceptPlacementButton" Width="92" Height="32" Margin="0,0,8,0" Click="Q13AcceptPlacementButton_Click" IsEnabled="False">Accept</Button>
+                                        <Button x:Name="Q13CancelPlacementButton" Width="92" Height="32" Click="Q13CancelPlacementButton_Click">Cancel</Button>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Q13 Placement" FontWeight="SemiBold" Foreground="#172033" />
+                                        <TextBlock x:Name="Q13PlacementStatusText" Text="Open an image to detect or define the Q13 grayscale strip." Margin="0,3,0,0" Foreground="#5B6472" />
+                                    </StackPanel>
+                                </DockPanel>
+                                <Border Grid.Row="1" Margin="0,10,0,0" Background="#20242A" BorderBrush="#D9DEE7" BorderThickness="1">
+                                    <Grid x:Name="Q13PlacementHost"
+                                          ClipToBounds="True"
+                                          Focusable="True"
+                                          SizeChanged="Q13PlacementHost_SizeChanged"
+                                          MouseLeftButtonDown="Q13PlacementHost_MouseLeftButtonDown"
+                                          MouseLeftButtonUp="Q13PlacementHost_MouseLeftButtonUp"
+                                          MouseMove="Q13PlacementHost_MouseMove"
+                                          KeyDown="Q13PlacementHost_KeyDown">
+                                        <Image x:Name="Q13PlacementImage" Stretch="Uniform" />
+                                        <Canvas x:Name="Q13PlacementCanvas" IsHitTestVisible="False" />
                                     </Grid>
                                 </Border>
-                                <TextBlock Grid.Row="2" Text="Measurement Summary" FontWeight="SemiBold" Foreground="#172033" />
-                                <Grid Grid.Row="3" Margin="0,10,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="150" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="30" />
-                                        <RowDefinition Height="30" />
-                                        <RowDefinition Height="30" />
-                                        <RowDefinition Height="30" />
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Text="Sampling" Foreground="#5B6472" />
-                                    <TextBlock x:Name="Q13SamplingText" Grid.Column="1" Text="-" />
-                                    <TextBlock Grid.Row="1" Text="Sample N" Foreground="#5B6472" />
-                                    <TextBlock x:Name="Q13SampleSizeText" Grid.Row="1" Grid.Column="1" Text="-" />
-                                    <TextBlock Grid.Row="2" Text="1/gamma" Foreground="#5B6472" />
-                                    <TextBlock x:Name="Q13GammaText" Grid.Row="2" Grid.Column="1" Text="-" />
-                                    <TextBlock Grid.Row="3" Text="Patch count" Foreground="#5B6472" />
-                                    <TextBlock x:Name="Q13PatchCountText" Grid.Row="3" Grid.Column="1" Text="-" />
-                                </Grid>
-                            </Grid>
-                        </Border>
-
-                        <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="1" CornerRadius="6">
-                            <Grid Margin="12">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <TextBlock Text="Input, Output, RMS Noise" FontWeight="SemiBold" Foreground="#172033" />
-                                <DataGrid x:Name="Q13ResultsGrid"
-                                          Grid.Row="1"
-                                          Margin="0,10,0,0"
-                                          AutoGenerateColumns="False"
-                                          CanUserAddRows="False"
-                                          CanUserDeleteRows="False"
-                                          IsReadOnly="True"
-                                          HeadersVisibility="Column"
-                                          GridLinesVisibility="Horizontal"
-                                          AlternatingRowBackground="#F8FAFC" />
                             </Grid>
                         </Border>
                     </Grid>

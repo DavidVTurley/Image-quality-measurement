@@ -34,6 +34,12 @@ public sealed class Q13Measurer
         var sampleSize = options.SampleSize;
         var patches = new List<PatchMeasurement>(options.PatchCount);
         var targets = Q13Target.KodakPatches;
+
+        if (options.StripGeometry is not null)
+        {
+            return MeasureStripGeometry(image, imagePath, channels, options);
+        }
+
         var sampleCenters = ResolveSampleCenters(image.Width, image.Height, options);
 
         for (var patchIndex = 0; patchIndex < options.PatchCount; patchIndex++)
@@ -72,6 +78,21 @@ public sealed class Q13Measurer
             throw new ArgumentOutOfRangeException(nameof(options), "Explicit sample centers must include exactly one point per Q-13 patch.");
         }
 
+        if (options.SampleCenters is not null && options.StripGeometry is not null)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Use either explicit sample centers or strip geometry, not both.");
+        }
+
+        if (options.SampleRegions is not null && options.StripGeometry is null)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Sample regions require strip geometry.");
+        }
+
+        if (options.SampleRegions is not null && options.SampleRegions.Count != options.PatchCount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Explicit sample regions must include exactly one region per Q-13 patch.");
+        }
+
         if (options.SampleCenters is not null)
         {
             var expected = Enumerable.Range(0, options.PatchCount).ToArray();
@@ -79,6 +100,16 @@ public sealed class Q13Measurer
             if (!actual.SequenceEqual(expected))
             {
                 throw new ArgumentOutOfRangeException(nameof(options), "Explicit sample centers must be indexed 0 through 19 exactly once.");
+            }
+        }
+
+        if (options.SampleRegions is not null)
+        {
+            var expected = Enumerable.Range(0, options.PatchCount).ToArray();
+            var actual = options.SampleRegions.Select(region => region.PatchIndex).Order().ToArray();
+            if (!actual.SequenceEqual(expected))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), "Explicit sample regions must be indexed 0 through 19 exactly once.");
             }
         }
     }
@@ -170,6 +201,50 @@ public sealed class Q13Measurer
         }
     }
 
+    private static Q13MeasurementResult MeasureStripGeometry(Mat image, string imagePath, int channels, Q13MeasurementOptions options)
+    {
+        var geometry = options.StripGeometry!;
+        var stripWidth = Math.Max(options.PatchCount * options.SampleSize, (int)Math.Round(geometry.Width));
+        var stripHeight = Math.Max(options.SampleSize, (int)Math.Round(geometry.Height));
+
+        using var warped = new Mat();
+        var destination = new[]
+        {
+            new Point2f(0, 0),
+            new Point2f(stripWidth - 1, 0),
+            new Point2f(stripWidth - 1, stripHeight - 1),
+            new Point2f(0, stripHeight - 1)
+        };
+
+        using var transform = Cv2.GetPerspectiveTransform(geometry.SourcePoints(), destination);
+        Cv2.WarpPerspective(image, warped, transform, new Size(stripWidth, stripHeight), InterpolationFlags.Linear, BorderTypes.Replicate);
+
+        var targets = Q13Target.KodakPatches;
+        var regions = (options.SampleRegions ?? Q13StripGeometry.CreateDefaultSampleRegions(patchCount: options.PatchCount))
+            .OrderBy(region => region.PatchIndex)
+            .ToArray();
+        var patches = new List<PatchMeasurement>(regions.Length);
+
+        foreach (var region in regions)
+        {
+            var sampleSize = Math.Max(1, MakeOdd((int)Math.Round(region.Size * stripHeight)));
+            var centerX = region.CenterX * stripWidth;
+            var centerY = region.CenterY * stripHeight;
+            var rect = GetSampleRectFromCenter(stripWidth, stripHeight, sampleSize, centerX, centerY);
+            using var roi = new Mat(warped, rect);
+            patches.Add(MeasurePatch(roi, targets[region.PatchIndex], region.PatchIndex, channels, centerX, centerY, rect));
+        }
+
+        return new Q13MeasurementResult(
+            imagePath,
+            EstimateSamplingPixelsPerInch(stripWidth, options.PatchCount),
+            patches[0].SampleSize,
+            CalculateInverseGamma(patches, channel: 0),
+            CalculateInverseGamma(patches, channel: 1),
+            CalculateInverseGamma(patches, channel: 2),
+            patches);
+    }
+
     private static (double Mean, double StdDev) MeanAndPopulationStdDev(Mat mat)
     {
         Cv2.MeanStdDev(mat, out var mean, out var stdDev);
@@ -227,5 +302,10 @@ public sealed class Q13Measurer
     private static int Clamp(int value, int min, int max)
     {
         return Math.Min(Math.Max(value, min), max);
+    }
+
+    private static int MakeOdd(int value)
+    {
+        return value % 2 == 0 ? value + 1 : value;
     }
 }
