@@ -26,43 +26,43 @@ public sealed record Q13MeasurementResult(
 
         if (IsColor)
         {
-            builder.AppendLine("Patch,SampleCenterX,SampleCenterY,SampleX,SampleY,SampleSize,InputRed,InputGreen,InputBlue,OutputRed,OutputGreen,OutputBlue,NoiseRed,NoiseGreen,NoiseBlue");
+            builder.AppendLine("Patch,OutputRed,OutputGreen,OutputBlue,NoiseRed,NoiseGreen,NoiseBlue,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
             foreach (var patch in Patches)
             {
                 builder.Append(patch.Index).Append(',')
-                    .Append(Format(patch.SampleCenterX)).Append(',')
-                    .Append(Format(patch.SampleCenterY)).Append(',')
-                    .Append(patch.SampleX).Append(',')
-                    .Append(patch.SampleY).Append(',')
-                    .Append(patch.SampleSize).Append(',')
-                    .Append(Format(patch.InputRed)).Append(',')
-                    .Append(Format(patch.InputGreen)).Append(',')
-                    .Append(Format(patch.InputBlue)).Append(',')
                     .Append(Format(patch.OutputRed)).Append(',')
                     .Append(Format(patch.OutputGreen)).Append(',')
                     .Append(Format(patch.OutputBlue)).Append(',')
                     .Append(Format(patch.NoiseRed)).Append(',')
                     .Append(Format(patch.NoiseGreen)).Append(',')
-                    .Append(Format(patch.NoiseBlue)).AppendLine();
+                    .Append(Format(patch.NoiseBlue)).Append(',')
+                    .Append(patch.SampleTopLeftX).Append(',')
+                    .Append(patch.SampleTopLeftY).Append(',')
+                    .Append(patch.SampleTopRightX).Append(',')
+                    .Append(patch.SampleTopRightY).Append(',')
+                    .Append(patch.SampleBottomRightX).Append(',')
+                    .Append(patch.SampleBottomRightY).Append(',')
+                    .Append(patch.SampleBottomLeftX).Append(',')
+                    .Append(patch.SampleBottomLeftY).AppendLine();
             }
 
             return builder.ToString();
         }
 
-        builder.AppendLine("Patch,SampleCenterX,SampleCenterY,SampleX,SampleY,SampleSize,InputRed,InputGreen,InputBlue,Output,Noise");
+        builder.AppendLine("Patch,Output,Noise,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
         foreach (var patch in Patches)
         {
             builder.Append(patch.Index).Append(',')
-                .Append(Format(patch.SampleCenterX)).Append(',')
-                .Append(Format(patch.SampleCenterY)).Append(',')
-                .Append(patch.SampleX).Append(',')
-                .Append(patch.SampleY).Append(',')
-                .Append(patch.SampleSize).Append(',')
-                .Append(Format(patch.InputRed)).Append(',')
-                .Append(Format(patch.InputGreen)).Append(',')
-                .Append(Format(patch.InputBlue)).Append(',')
                 .Append(Format(patch.Output)).Append(',')
-                .Append(Format(patch.Noise)).AppendLine();
+                .Append(Format(patch.Noise)).Append(',')
+                .Append(patch.SampleTopLeftX).Append(',')
+                .Append(patch.SampleTopLeftY).Append(',')
+                .Append(patch.SampleTopRightX).Append(',')
+                .Append(patch.SampleTopRightY).Append(',')
+                .Append(patch.SampleBottomRightX).Append(',')
+                .Append(patch.SampleBottomRightY).Append(',')
+                .Append(patch.SampleBottomLeftX).Append(',')
+                .Append(patch.SampleBottomLeftY).AppendLine();
         }
 
         return builder.ToString();
@@ -94,14 +94,10 @@ public sealed record Q13MeasurementResult(
             builder.Append("1/gamma:  ").AppendLine(Format(InverseGamma, "0.00"));
         }
 
-        builder.AppendLine("Input, output, RMS noise ");
+        builder.AppendLine("Output, RMS noise ");
 
         foreach (var patch in Patches)
         {
-            builder.Append(Format(patch.InputRed)).Append('\t')
-                .Append(Format(patch.InputGreen)).Append('\t')
-                .Append(Format(patch.InputBlue)).Append('\t');
-
             if (IsColor)
             {
                 builder.Append(Format(patch.OutputRed)).Append('\t')

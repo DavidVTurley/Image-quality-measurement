@@ -21,6 +21,8 @@ public sealed class UniformityAnalyzerTests
             Assert.Equal(0, result.MaxDeltaLStar, precision: 4);
             Assert.Equal(0, result.MaxDeltaEab, precision: 4);
             Assert.Contains("Illumination,MaxDeltaLStar", result.ToCsv());
+            Assert.Contains("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY", result.ToCsv());
+            Assert.DoesNotContain("SampleCenterX", result.ToCsv());
         }
         finally
         {

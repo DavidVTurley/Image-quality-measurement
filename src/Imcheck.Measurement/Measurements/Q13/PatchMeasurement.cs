@@ -2,9 +2,6 @@ namespace Imcheck.Measurement.Measurements.Q13;
 
 public sealed record PatchMeasurement(
     int Index,
-    double InputRed,
-    double InputGreen,
-    double InputBlue,
     double OutputRed,
     double OutputGreen,
     double OutputBlue,
@@ -21,4 +18,20 @@ public sealed record PatchMeasurement(
     public double Output => OutputGreen;
 
     public double Noise => NoiseGreen;
+
+    public int SampleTopLeftX => SampleX;
+
+    public int SampleTopLeftY => SampleY;
+
+    public int SampleTopRightX => SampleX + SampleSize;
+
+    public int SampleTopRightY => SampleY;
+
+    public int SampleBottomRightX => SampleX + SampleSize;
+
+    public int SampleBottomRightY => SampleY + SampleSize;
+
+    public int SampleBottomLeftX => SampleX;
+
+    public int SampleBottomLeftY => SampleY + SampleSize;
 }

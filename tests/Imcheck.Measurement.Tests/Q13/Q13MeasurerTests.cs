@@ -28,7 +28,7 @@ public sealed class Q13MeasurerTests
             Assert.Equal(0, pair.First.Noise);
         });
         Assert.Contains("244\t0", result.ToImcheckText());
-        Assert.Contains("Patch,SampleCenterX,SampleCenterY,SampleX,SampleY,SampleSize,InputRed,InputGreen,InputBlue,Output,Noise", result.ToCsv());
+        Assert.Contains("Patch,Output,Noise,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY", result.ToCsv());
     }
 
     [Fact]

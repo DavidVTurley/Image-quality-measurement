@@ -26,21 +26,24 @@ public sealed record Qa62MeasurementResult(
         AppendValues(builder, "Misregistration pixels", "Vertical", SfrSummary.VerticalMisregistrationPixels);
 
         builder.AppendLine();
-        builder.AppendLine("Step,SampleCenterX,SampleCenterY,SampleX,SampleY,SampleSize,MeanRed,MeanGreen,MeanBlue,NoiseRed,NoiseGreen,NoiseBlue");
+        builder.AppendLine("Step,MeanRed,MeanGreen,MeanBlue,NoiseRed,NoiseGreen,NoiseBlue,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
         foreach (var patch in Patches)
         {
             builder.Append(patch.Step).Append(',')
-                .Append(Format(patch.SampleCenterX)).Append(',')
-                .Append(Format(patch.SampleCenterY)).Append(',')
-                .Append(patch.SampleX).Append(',')
-                .Append(patch.SampleY).Append(',')
-                .Append(patch.SampleSize).Append(',')
                 .Append(Format(patch.OutputRed)).Append(',')
                 .Append(Format(patch.OutputGreen)).Append(',')
                 .Append(Format(patch.OutputBlue)).Append(',')
                 .Append(Format(patch.NoiseRed)).Append(',')
                 .Append(Format(patch.NoiseGreen)).Append(',')
-                .Append(Format(patch.NoiseBlue)).AppendLine();
+                .Append(Format(patch.NoiseBlue)).Append(',')
+                .Append(patch.SampleTopLeftX).Append(',')
+                .Append(patch.SampleTopLeftY).Append(',')
+                .Append(patch.SampleTopRightX).Append(',')
+                .Append(patch.SampleTopRightY).Append(',')
+                .Append(patch.SampleBottomRightX).Append(',')
+                .Append(patch.SampleBottomRightY).Append(',')
+                .Append(patch.SampleBottomLeftX).Append(',')
+                .Append(patch.SampleBottomLeftY).AppendLine();
         }
 
         builder.AppendLine();

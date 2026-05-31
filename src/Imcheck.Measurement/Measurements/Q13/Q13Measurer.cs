@@ -143,9 +143,6 @@ public sealed class Q13Measurer
             var (mean, noise) = ImageStatistics.MeanAndPopulationStdDev(roi);
             return new PatchMeasurement(
                 patchIndex,
-                target.InputRed,
-                target.InputGreen,
-                target.InputBlue,
                 mean,
                 mean,
                 mean,
@@ -169,9 +166,6 @@ public sealed class Q13Measurer
 
             return new PatchMeasurement(
                 patchIndex,
-                target.InputRed,
-                target.InputGreen,
-                target.InputBlue,
                 redMean,
                 greenMean,
                 blueMean,

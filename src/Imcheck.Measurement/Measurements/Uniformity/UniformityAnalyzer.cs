@@ -238,21 +238,24 @@ public sealed record UniformityAnalysisResult(
         AppendSummary(builder, "Illumination", "MaxDeltaLStar", MaxDeltaLStar, IlluminationDeltaLStarTolerance, IlluminationPass);
         AppendSummary(builder, "WhiteBalance", "MaxDeltaEab", MaxDeltaEab, WhiteBalanceDeltaEabTolerance, WhiteBalancePass);
         builder.AppendLine();
-        builder.AppendLine("Name,SampleCenterX,SampleCenterY,SampleX,SampleY,SampleSize,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar");
+        builder.AppendLine("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
         foreach (var sample in Samples)
         {
             builder.Append(sample.Name).Append(',')
-                .Append(Format(sample.SampleCenterX)).Append(',')
-                .Append(Format(sample.SampleCenterY)).Append(',')
-                .Append(sample.SampleX).Append(',')
-                .Append(sample.SampleY).Append(',')
-                .Append(sample.SampleSize).Append(',')
                 .Append(Format(sample.MeanRed)).Append(',')
                 .Append(Format(sample.MeanGreen)).Append(',')
                 .Append(Format(sample.MeanBlue)).Append(',')
                 .Append(Format(sample.LStar)).Append(',')
                 .Append(Format(sample.AStar)).Append(',')
-                .Append(Format(sample.BStar)).AppendLine();
+                .Append(Format(sample.BStar)).Append(',')
+                .Append(sample.SampleTopLeftX).Append(',')
+                .Append(sample.SampleTopLeftY).Append(',')
+                .Append(sample.SampleTopRightX).Append(',')
+                .Append(sample.SampleTopRightY).Append(',')
+                .Append(sample.SampleBottomRightX).Append(',')
+                .Append(sample.SampleBottomRightY).Append(',')
+                .Append(sample.SampleBottomLeftX).Append(',')
+                .Append(sample.SampleBottomLeftY).AppendLine();
         }
 
         return builder.ToString();
@@ -285,7 +288,24 @@ public sealed record WhiteSheetSampleMeasurement(
     double MeanBlue,
     double LStar,
     double AStar,
-    double BStar);
+    double BStar)
+{
+    public int SampleTopLeftX => SampleX;
+
+    public int SampleTopLeftY => SampleY;
+
+    public int SampleTopRightX => SampleX + SampleSize;
+
+    public int SampleTopRightY => SampleY;
+
+    public int SampleBottomRightX => SampleX + SampleSize;
+
+    public int SampleBottomRightY => SampleY + SampleSize;
+
+    public int SampleBottomLeftX => SampleX;
+
+    public int SampleBottomLeftY => SampleY + SampleSize;
+}
 
 public enum RgbColorSpace
 {

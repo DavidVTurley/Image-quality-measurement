@@ -77,11 +77,6 @@ public partial class MainWindow : Window
     {
         Q13ResultsGrid.Columns.Clear();
         AddColumn(Q13ResultsGrid, "Patch", "Index", "0.##", 64);
-        AddColumn(Q13ResultsGrid, "Center X", "SampleCenterX", "0.##");
-        AddColumn(Q13ResultsGrid, "Center Y", "SampleCenterY", "0.##");
-        AddColumn(Q13ResultsGrid, "Input R", "InputRed", "0.0000");
-        AddColumn(Q13ResultsGrid, "Input G", "InputGreen", "0.0000");
-        AddColumn(Q13ResultsGrid, "Input B", "InputBlue", "0.0000");
         AddColumn(Q13ResultsGrid, "Output R", "OutputRed", "0.####");
         AddColumn(Q13ResultsGrid, "Output G", "OutputGreen", "0.####");
         AddColumn(Q13ResultsGrid, "Output B", "OutputBlue", "0.####");
@@ -94,9 +89,6 @@ public partial class MainWindow : Window
     {
         UniformityResultsGrid.Columns.Clear();
         AddColumn(UniformityResultsGrid, "Area", "Name", null, 100);
-        AddColumn(UniformityResultsGrid, "Center X", "SampleCenterX", "0.##");
-        AddColumn(UniformityResultsGrid, "Center Y", "SampleCenterY", "0.##");
-        AddColumn(UniformityResultsGrid, "Size", "SampleSize", "0.##", 72);
         AddColumn(UniformityResultsGrid, "Mean R", "MeanRed", "0.####");
         AddColumn(UniformityResultsGrid, "Mean G", "MeanGreen", "0.####");
         AddColumn(UniformityResultsGrid, "Mean B", "MeanBlue", "0.####");
