@@ -3,7 +3,7 @@ using OpenCvSharp;
 
 namespace Imcheck.Measurement.Tests;
 
-public sealed class MetamorfozeWhiteSheetAnalyzerTests
+public sealed class UniformityAnalyzerTests
 {
     [Fact]
     public void UniformWhiteSheetPassesFullA3Tolerances()
@@ -11,7 +11,7 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
         var path = CreateTempImage(width: 200, height: 120, (_, _) => new Vec3b(242, 242, 242));
         try
         {
-            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(path);
+            var result = new UniformityAnalyzer().Analyze(path);
 
             Assert.Equal(5, result.Samples.Count);
             Assert.Equal(33, result.SampleSize);
@@ -34,7 +34,7 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
         var path = CreateTempImage(width: 300, height: 300, (_, _) => new Vec3b(242, 242, 242));
         try
         {
-            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(path);
+            var result = new UniformityAnalyzer().Analyze(path);
 
             Assert.Equal(33, result.SampleSize);
             Assert.Equal(("TopLeft", 49.5, 49.5, 33), SampleShape(result.Samples[0]));
@@ -55,9 +55,9 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
         var path = CreateTempImage(width: 300, height: 300, (_, _) => new Vec3b(242, 242, 242));
         try
         {
-            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(
+            var result = new UniformityAnalyzer().Analyze(
                 path,
-                new MetamorfozeWhiteSheetAnalysisOptions { SampleSize = 51 });
+                new UniformityAnalysisOptions { SampleSize = 51 });
 
             Assert.Equal(51, result.SampleSize);
             Assert.All(result.Samples, sample => Assert.Equal(51, sample.SampleSize));
@@ -75,9 +75,9 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
         try
         {
             Assert.Throws<ArgumentOutOfRangeException>(() =>
-                new MetamorfozeWhiteSheetAnalyzer().Analyze(
+                new UniformityAnalyzer().Analyze(
                     path,
-                    new MetamorfozeWhiteSheetAnalysisOptions { SampleSize = 31 }));
+                    new UniformityAnalysisOptions { SampleSize = 31 }));
         }
         finally
         {
@@ -98,7 +98,7 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
             });
         try
         {
-            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(path);
+            var result = new UniformityAnalyzer().Analyze(path);
 
             Assert.False(result.IlluminationPass);
             Assert.True(result.WhiteBalancePass);
@@ -125,7 +125,7 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
             });
         try
         {
-            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(path);
+            var result = new UniformityAnalyzer().Analyze(path);
 
             Assert.False(result.WhiteBalancePass);
         }
@@ -136,17 +136,17 @@ public sealed class MetamorfozeWhiteSheetAnalyzerTests
     }
 
     [Fact]
-    public void MetamorfozeV2ToleranceTableMatchesWhiteSheetUniformityRequirements()
+    public void ToleranceTableMatchesWhiteSheetUniformityRequirements()
     {
-        Assert.Equal(3.0, MetamorfozeTolerances.IlluminationDeltaL(MetamorfozeQualityLevel.Full, MetamorfozeImagePlaneSize.UpToA3));
-        Assert.Equal(4.0, MetamorfozeTolerances.IlluminationDeltaL(MetamorfozeQualityLevel.Full, MetamorfozeImagePlaneSize.UpToA2));
-        Assert.Equal(5.0, MetamorfozeTolerances.IlluminationDeltaL(MetamorfozeQualityLevel.Full, MetamorfozeImagePlaneSize.UpToA1));
-        Assert.Equal(6.0, MetamorfozeTolerances.IlluminationDeltaL(MetamorfozeQualityLevel.Full, MetamorfozeImagePlaneSize.UpToA0));
-        Assert.Equal(3.0, MetamorfozeTolerances.WhiteBalanceDeltaEab(MetamorfozeQualityLevel.Full));
+        Assert.Equal(3.0, UniformityTolerances.IlluminationDeltaL(UniformityQualityLevel.Full, UniformityImagePlaneSize.UpToA3));
+        Assert.Equal(4.0, UniformityTolerances.IlluminationDeltaL(UniformityQualityLevel.Full, UniformityImagePlaneSize.UpToA2));
+        Assert.Equal(5.0, UniformityTolerances.IlluminationDeltaL(UniformityQualityLevel.Full, UniformityImagePlaneSize.UpToA1));
+        Assert.Equal(6.0, UniformityTolerances.IlluminationDeltaL(UniformityQualityLevel.Full, UniformityImagePlaneSize.UpToA0));
+        Assert.Equal(3.0, UniformityTolerances.WhiteBalanceDeltaEab(UniformityQualityLevel.Full));
 
-        Assert.Equal(5.0, MetamorfozeTolerances.IlluminationDeltaL(MetamorfozeQualityLevel.ExtraLight, MetamorfozeImagePlaneSize.UpToA3));
-        Assert.Null(MetamorfozeTolerances.IlluminationDeltaL(MetamorfozeQualityLevel.ExtraLight, MetamorfozeImagePlaneSize.UpToA2));
-        Assert.Equal(5.0, MetamorfozeTolerances.WhiteBalanceDeltaEab(MetamorfozeQualityLevel.ExtraLight));
+        Assert.Equal(5.0, UniformityTolerances.IlluminationDeltaL(UniformityQualityLevel.ExtraLight, UniformityImagePlaneSize.UpToA3));
+        Assert.Null(UniformityTolerances.IlluminationDeltaL(UniformityQualityLevel.ExtraLight, UniformityImagePlaneSize.UpToA2));
+        Assert.Equal(5.0, UniformityTolerances.WhiteBalanceDeltaEab(UniformityQualityLevel.ExtraLight));
     }
 
     private static string CreateTempImage(int width, int height, Func<int, int, Vec3b> pixel)

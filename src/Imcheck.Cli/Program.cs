@@ -1,5 +1,6 @@
 using Imcheck.Measurement;
 using Imcheck.Measurement.Meaasurements.Q13;
+using Imcheck.Measurement.Meaasurements.Qa62;
 using Imcheck.Measurement.Meaasurements.Uniformity;
 
 return await RunAsync(args);
@@ -28,9 +29,9 @@ static async Task<int> RunAsync(string[] args)
 
         if (options.AnalysisTarget == AnalysisMode.WhiteSheet)
         {
-            var result = new MetamorfozeWhiteSheetAnalyzer().Analyze(
+            var result = new UniformityAnalyzer().Analyze(
                 options.ImagePath!,
-                new MetamorfozeWhiteSheetAnalysisOptions
+                new UniformityAnalysisOptions
                 {
                     SampleSize = options.SampleSizeWasProvided ? options.SampleSize : null,
                     ColorSpace = options.ColorSpace,
@@ -178,8 +179,8 @@ internal sealed record CliOptions(
     double SamplingPixelsPerInch,
     int Dpi,
     RgbColorSpace ColorSpace,
-    MetamorfozeQualityLevel QualityLevel,
-    MetamorfozeImagePlaneSize ImagePlaneSize)
+    UniformityQualityLevel QualityLevel,
+    UniformityImagePlaneSize ImagePlaneSize)
 {
     public static CliOptions Parse(string[] args)
     {
@@ -195,8 +196,8 @@ internal sealed record CliOptions(
         var samplingPixelsPerInch = 301.1;
         var dpi = Qa62TargetGenerator.DefaultDpi;
         var colorSpace = RgbColorSpace.SRgb;
-        var qualityLevel = MetamorfozeQualityLevel.Full;
-        var imagePlaneSize = MetamorfozeImagePlaneSize.UpToA3;
+        var qualityLevel = UniformityQualityLevel.Full;
+        var imagePlaneSize = UniformityImagePlaneSize.UpToA3;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -273,9 +274,9 @@ internal sealed record CliOptions(
                     var rawQuality = RequiredValue(args, ref i, arg);
                     qualityLevel = rawQuality.ToLowerInvariant() switch
                     {
-                        "full" or "metamorfoze" => MetamorfozeQualityLevel.Full,
-                        "light" => MetamorfozeQualityLevel.Light,
-                        "extra-light" or "extralight" => MetamorfozeQualityLevel.ExtraLight,
+                        "full" => UniformityQualityLevel.Full,
+                        "light" => UniformityQualityLevel.Light,
+                        "extra-light" or "extralight" => UniformityQualityLevel.ExtraLight,
                         _ => throw new ArgumentException("--quality must be full, light, or extra-light.")
                     };
                     break;
@@ -283,10 +284,10 @@ internal sealed record CliOptions(
                     var rawImageSize = RequiredValue(args, ref i, arg);
                     imagePlaneSize = rawImageSize.ToLowerInvariant() switch
                     {
-                        "a3" or "<=a3" => MetamorfozeImagePlaneSize.UpToA3,
-                        "a2" or "<=a2" => MetamorfozeImagePlaneSize.UpToA2,
-                        "a1" or "<=a1" => MetamorfozeImagePlaneSize.UpToA1,
-                        "a0" or "<=a0" => MetamorfozeImagePlaneSize.UpToA0,
+                        "a3" or "<=a3" => UniformityImagePlaneSize.UpToA3,
+                        "a2" or "<=a2" => UniformityImagePlaneSize.UpToA2,
+                        "a1" or "<=a1" => UniformityImagePlaneSize.UpToA1,
+                        "a0" or "<=a0" => UniformityImagePlaneSize.UpToA0,
                         _ => throw new ArgumentException("--image-size must be a3, a2, a1, or a0.")
                     };
                     break;

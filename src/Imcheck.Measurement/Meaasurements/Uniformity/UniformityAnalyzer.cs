@@ -4,7 +4,7 @@ using OpenCvSharp;
 
 namespace Imcheck.Measurement.Meaasurements.Uniformity;
 
-public sealed class MetamorfozeWhiteSheetAnalyzer
+public sealed class UniformityAnalyzer
 {
     private const int MinimumSampleSize = 33;
     private const double DefaultCellCoverage = 0.33;
@@ -18,14 +18,14 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
         new("BottomRight", 2, 2),
     ];
 
-    public MetamorfozeWhiteSheetAnalysisResult Analyze(string imagePath, MetamorfozeWhiteSheetAnalysisOptions? options = null)
+    public UniformityAnalysisResult Analyze(string imagePath, UniformityAnalysisOptions? options = null)
     {
         if (string.IsNullOrWhiteSpace(imagePath))
         {
             throw new ArgumentException("Image path is required.", nameof(imagePath));
         }
 
-        options ??= new MetamorfozeWhiteSheetAnalysisOptions();
+        options ??= new UniformityAnalysisOptions();
         ValidateOptions(options);
 
         using var image = Cv2.ImRead(imagePath, ImreadModes.Unchanged);
@@ -60,10 +60,10 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
             }
         }
 
-        var illuminationTolerance = MetamorfozeTolerances.IlluminationDeltaL(options.QualityLevel, options.ImagePlaneSize);
-        var whiteBalanceTolerance = MetamorfozeTolerances.WhiteBalanceDeltaEab(options.QualityLevel);
+        var illuminationTolerance = UniformityTolerances.IlluminationDeltaL(options.QualityLevel, options.ImagePlaneSize);
+        var whiteBalanceTolerance = UniformityTolerances.WhiteBalanceDeltaEab(options.QualityLevel);
 
-        return new MetamorfozeWhiteSheetAnalysisResult(
+        return new UniformityAnalysisResult(
             imagePath,
             image.Width,
             image.Height,
@@ -79,7 +79,7 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
             whiteBalanceTolerance);
     }
 
-    private static WhiteSheetSampleMeasurement MeasurePoint(Mat image, WhiteSheetSamplePoint point, int sampleSize, MetamorfozeWhiteSheetAnalysisOptions options)
+    private static WhiteSheetSampleMeasurement MeasurePoint(Mat image, WhiteSheetSamplePoint point, int sampleSize, UniformityAnalysisOptions options)
     {
         var cellWidth = image.Width / 3.0;
         var cellHeight = image.Height / 3.0;
@@ -162,7 +162,7 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
         return Math.Sqrt(deltaA * deltaA + deltaB * deltaB);
     }
 
-    private static void ValidateOptions(MetamorfozeWhiteSheetAnalysisOptions options)
+    private static void ValidateOptions(UniformityAnalysisOptions options)
     {
         if (options.SampleSize is null)
         {
@@ -175,7 +175,7 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
         }
     }
 
-    private static int ResolveSampleSize(int imageWidth, int imageHeight, MetamorfozeWhiteSheetAnalysisOptions options)
+    private static int ResolveSampleSize(int imageWidth, int imageHeight, UniformityAnalysisOptions options)
     {
         var cellWidth = imageWidth / 3.0;
         var cellHeight = imageHeight / 3.0;
@@ -210,25 +210,25 @@ public sealed class MetamorfozeWhiteSheetAnalyzer
     private sealed record WhiteSheetSamplePoint(string Name, int Column, int Row);
 }
 
-public sealed record MetamorfozeWhiteSheetAnalysisOptions
+public sealed record UniformityAnalysisOptions
 {
     public int? SampleSize { get; init; }
 
     public RgbColorSpace ColorSpace { get; init; } = RgbColorSpace.SRgb;
 
-    public MetamorfozeQualityLevel QualityLevel { get; init; } = MetamorfozeQualityLevel.Full;
+    public UniformityQualityLevel QualityLevel { get; init; } = UniformityQualityLevel.Full;
 
-    public MetamorfozeImagePlaneSize ImagePlaneSize { get; init; } = MetamorfozeImagePlaneSize.UpToA3;
+    public UniformityImagePlaneSize ImagePlaneSize { get; init; } = UniformityImagePlaneSize.UpToA3;
 }
 
-public sealed record MetamorfozeWhiteSheetAnalysisResult(
+public sealed record UniformityAnalysisResult(
     string ImagePath,
     int ImageWidth,
     int ImageHeight,
     int BitDepth,
     RgbColorSpace ColorSpace,
-    MetamorfozeQualityLevel QualityLevel,
-    MetamorfozeImagePlaneSize ImagePlaneSize,
+    UniformityQualityLevel QualityLevel,
+    UniformityImagePlaneSize ImagePlaneSize,
     int SampleSize,
     IReadOnlyList<WhiteSheetSampleMeasurement> Samples,
     double MaxDeltaLStar,
@@ -305,14 +305,14 @@ public enum RgbColorSpace
     EciRgbV2
 }
 
-public enum MetamorfozeQualityLevel
+public enum UniformityQualityLevel
 {
     Full,
     Light,
     ExtraLight
 }
 
-public enum MetamorfozeImagePlaneSize
+public enum UniformityImagePlaneSize
 {
     UpToA3,
     UpToA2,
