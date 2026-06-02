@@ -1,5 +1,6 @@
 using Imcheck.Measurement.Measurements.Q13;
 using Imcheck.Measurement.Measurements.Uniformity;
+using Imcheck.Measurement;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +14,8 @@ public partial class MainWindow : Window
     private readonly Q13Measurer _q13Measurer = new();
     private readonly Q13GrayscaleDetector _q13Detector = new();
     private readonly UniformityAnalyzer _uniformityAnalyzer = new();
+    private readonly MunsellLinearGrayscaleTargetGenerator _munsellGenerator = new();
+    private readonly Q13GrayscaleTargetGenerator _q13Generator = new();
 
     private Q13MeasurementResult? _currentQ13Result;
     private UniformityAnalysisResult? _currentUniformityResult;
@@ -28,6 +31,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         ConfigureQ13Columns();
         ConfigureUniformityColumns();
+        InitializeGeneratorTab();
     }
 
     private static BitmapImage LoadBitmap(string path)

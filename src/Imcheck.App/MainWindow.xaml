@@ -226,6 +226,214 @@
                     </Grid>
                 </Grid>
             </TabItem>
+
+            <TabItem Header="Generator">
+                <Grid Background="#0F0F0F">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#181818" BorderBrush="#2A2A2A" BorderThickness="0,0,0,1">
+                        <DockPanel Margin="20,14">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <ComboBox x:Name="GeneratorTargetComboBox" Width="190" Height="34" Margin="0,0,8,0" SelectionChanged="GeneratorTargetComboBox_SelectionChanged">
+                                    <ComboBoxItem Tag="munsell">Munsell Linear Grayscale</ComboBoxItem>
+                                    <ComboBoxItem Tag="q13">Kodak Q13 Grayscale</ComboBoxItem>
+                                </ComboBox>
+                                <Button x:Name="GeneratorBrowseButton" Width="92" Height="34" Margin="0,0,8,0" Click="GeneratorBrowseButton_Click">Browse</Button>
+                                <Button x:Name="GeneratorGenerateButton" Width="132" Height="34" Click="GeneratorGenerateButton_Click">Generate PNG</Button>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock x:Name="GeneratorTitleText" Text="Grayscale Target Generator" FontSize="18" FontWeight="SemiBold" Foreground="#C8A96E" />
+                                <TextBlock x:Name="GeneratorSubtitleText" Text="Choose a grayscale card, apply optional test noise, and export directly from C#." Margin="0,3,0,0" Foreground="#777777" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1" Margin="20">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="18">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="180" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="PREVIEW" FontFamily="Consolas" FontSize="11" Foreground="#666666" />
+                                <Border Grid.Row="1" Margin="0,12,0,0" Background="#050505" BorderBrush="#333333" BorderThickness="1">
+                                    <Image x:Name="GeneratorPreviewImage" Stretch="Uniform" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="1"
+                                      Margin="0,18,0,0"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="330" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="330" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <Border Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <TextBlock Text="SPECIFICATIONS" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="145" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Patches" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorPatchCountText" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="1" Text="L* range" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorLStarRangeText" Grid.Row="1" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="2" Text="Card size" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorCardSizeText" Grid.Row="2" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="3" Text="Values" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorValuesText" Grid.Row="3" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="4" Text="Output" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="PNG" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="5" Text="Current size" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorPixelSizeText" Grid.Row="5" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <TextBlock Text="NOISE" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
+                                        <CheckBox x:Name="GeneratorNoiseEnabledCheckBox" Content="Enable noisy export" Foreground="#E8E4DC" Margin="0,0,0,8" Checked="GeneratorOption_Changed" Unchecked="GeneratorOption_Changed" />
+                                        <TextBlock Text="Model" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                        <ComboBox x:Name="GeneratorNoiseModelComboBox" Height="28" Margin="0,5,0,8" SelectionChanged="GeneratorOption_Changed">
+                                            <ComboBoxItem Tag="gaussian">Gaussian per-pixel</ComboBoxItem>
+                                            <ComboBoxItem Tag="uniform">Uniform per-pixel</ComboBoxItem>
+                                            <ComboBoxItem Tag="patch">Patch-level variation</ComboBoxItem>
+                                        </ComboBox>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="10" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="34" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="34" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="34" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Amount px" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                            <TextBox x:Name="GeneratorNoiseAmountTextBox" Grid.Row="1" Height="28" TextChanged="GeneratorOption_Changed" />
+                                            <TextBlock Grid.Column="2" Text="Coverage %" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                            <TextBox x:Name="GeneratorNoiseCoverageTextBox" Grid.Row="1" Grid.Column="2" Height="28" TextChanged="GeneratorOption_Changed" />
+                                            <TextBlock Grid.Row="2" Text="Gradient px" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                            <TextBox x:Name="GeneratorNoiseGradientTextBox" Grid.Row="3" Height="28" TextChanged="GeneratorOption_Changed" />
+                                            <TextBlock Grid.Row="2" Grid.Column="2" Text="Blur px" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                            <TextBox x:Name="GeneratorNoiseBlurTextBox" Grid.Row="3" Grid.Column="2" Height="28" TextChanged="GeneratorOption_Changed" />
+                                            <TextBlock Grid.Row="4" Text="Patch bias px" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                            <TextBox x:Name="GeneratorNoisePatchBiasTextBox" Grid.Row="5" Height="28" TextChanged="GeneratorOption_Changed" />
+                                            <TextBlock Grid.Row="4" Grid.Column="2" Text="Seed" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                            <TextBox x:Name="GeneratorNoiseSeedTextBox" Grid.Row="5" Grid.Column="2" Height="28" TextChanged="GeneratorOption_Changed" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16">
+                                    <StackPanel>
+                                        <TextBlock Text="EXPORT RESOLUTION" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
+                                        <UniformGrid Columns="3" Margin="0,0,0,10">
+                                            <Button x:Name="GeneratorDpi150Button" Height="30" Margin="0,0,6,0" Tag="150" Click="GeneratorDpiButton_Click">150 dpi</Button>
+                                            <Button x:Name="GeneratorDpi300Button" Height="30" Margin="3,0,3,0" Tag="300" Click="GeneratorDpiButton_Click">300 dpi</Button>
+                                            <Button x:Name="GeneratorDpi600Button" Height="30" Margin="6,0,0,0" Tag="600" Click="GeneratorDpiButton_Click">600 dpi</Button>
+                                        </UniformGrid>
+                                        <TextBlock Text="Custom DPI" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                        <TextBox x:Name="GeneratorDpiTextBox" Margin="0,5,0,0" Height="28" TextChanged="GeneratorOption_Changed" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <Border Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16" Margin="0,0,0,14">
+                                    <StackPanel>
+                                        <TextBlock Text="LAYOUT" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
+                                        <CheckBox x:Name="GeneratorShowLabelsCheckBox" Content="Patch labels" Foreground="#E8E4DC" Margin="0,0,0,8" Checked="GeneratorOption_Changed" Unchecked="GeneratorOption_Changed" />
+                                        <CheckBox x:Name="GeneratorShowScaleCheckBox" Content="Millimeter scale" Foreground="#E8E4DC" Margin="0,0,0,8" Checked="GeneratorOption_Changed" Unchecked="GeneratorOption_Changed" />
+                                        <CheckBox x:Name="GeneratorShowTitleCheckBox" Content="Title text" Foreground="#E8E4DC" Checked="GeneratorOption_Changed" Unchecked="GeneratorOption_Changed" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16">
+                                    <StackPanel>
+                                        <TextBlock Text="EXPORT" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
+                                        <TextBlock Text="Output path" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
+                                        <TextBox x:Name="GeneratorOutputPathTextBox" Margin="0,5,0,10" Height="28" />
+                                        <Button Height="34" Click="GeneratorGenerateButton_Click">Save as PNG</Button>
+                                        <TextBlock x:Name="GeneratorExportStatusText" Margin="0,10,0,0" TextWrapping="Wrap" Foreground="#6DBB8A" FontFamily="Consolas" FontSize="11" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <Border Grid.Column="4" Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16" MinWidth="360">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="PATCH REFERENCE VALUES" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
+                                    <DataGrid x:Name="GeneratorPatchGrid"
+                                              Grid.Row="1"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              CanUserDeleteRows="False"
+                                              IsReadOnly="True"
+                                              HeadersVisibility="Column"
+                                              GridLinesVisibility="Horizontal"
+                                              Background="#181818"
+                                              Foreground="#E8E4DC"
+                                              RowBackground="#181818"
+                                              AlternatingRowBackground="#1E1E1E"
+                                              BorderBrush="#2A2A2A">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="70" />
+                                            <DataGridTextColumn Header="L*" Binding="{Binding LStar, StringFormat=0.##}" Width="70" />
+                                            <DataGridTextColumn Header="RGB" Binding="{Binding EncodedRgb}" Width="70" />
+                                            <DataGridTemplateColumn Header="Swatch" Width="90">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Border Width="18" Height="18" Margin="0,0,8,0" BorderBrush="#333333" BorderThickness="1" Background="{Binding SwatchBrush}" />
+                                                            <TextBlock Text="{Binding Hex}" Foreground="#E8E4DC" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </Border>
+                            </Grid>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </TabItem>
         </TabControl>
 
         <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D9DEE7" BorderThickness="0,1,0,0">
