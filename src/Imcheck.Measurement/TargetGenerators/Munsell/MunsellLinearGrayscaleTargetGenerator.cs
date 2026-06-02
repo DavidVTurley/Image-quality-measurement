@@ -8,6 +8,7 @@ public sealed class MunsellLinearGrayscaleTargetGenerator
     public const double TargetWidthMillimeters = 255.0;
     public const double TargetHeightMillimeters = 32.0;
 
+    // TODO: Replace theoretical neutral values with verified measured Munsell Linear Grayscale reference values.
     public static IReadOnlyList<MunsellLinearGrayscalePatch> Patches { get; } =
     [
         new("G1", 3.5),

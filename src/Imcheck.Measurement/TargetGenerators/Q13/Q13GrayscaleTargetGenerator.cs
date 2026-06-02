@@ -8,6 +8,7 @@ public sealed class Q13GrayscaleTargetGenerator
     public const double TargetWidthMillimeters = 203.0;
     public const double TargetHeightMillimeters = 30.0;
 
+    // TODO: Replace theoretical density-derived neutral values with verified measured Q13 reference values.
     public static IReadOnlyList<Q13GrayscalePatch> Patches { get; } = Enumerable.Range(0, 20)
         .Select(index =>
         {
