@@ -4,7 +4,24 @@ namespace Imcheck.Measurement.Measurements.Q13;
 
 public static class Q13ResultSampleCsv
 {
+    public static Q13ImportedSamples Load(string path, int patchCount = 20)
+    {
+        var samples = LoadRows(path, patchCount);
+        var normalizedSize = NormalizeSampleSize(samples.Min(sample => Math.Min(sample.Width, sample.Height)));
+        var centers = samples
+            .OrderBy(sample => sample.PatchIndex)
+            .Select(sample => new Q13SamplePoint(sample.PatchIndex, sample.CenterX, sample.CenterY))
+            .ToArray();
+
+        return new Q13ImportedSamples(centers, normalizedSize);
+    }
+
     public static IReadOnlyList<Q13SamplePoint> LoadSampleCenters(string path, int patchCount = 20)
+    {
+        return Load(path, patchCount).Centers;
+    }
+
+    private static IReadOnlyList<Q13ImportedSampleRow> LoadRows(string path, int patchCount)
     {
         using var reader = new StreamReader(path);
         string? headerLine = null;
@@ -29,17 +46,13 @@ public static class Q13ResultSampleCsv
         var indexes = RequiredIndexes(headers,
         [
             "Patch",
-            "SampleTopLeftX",
-            "SampleTopLeftY",
-            "SampleTopRightX",
-            "SampleTopRightY",
-            "SampleBottomRightX",
-            "SampleBottomRightY",
-            "SampleBottomLeftX",
-            "SampleBottomLeftY"
+            "SampleCenterX",
+            "SampleCenterY",
+            "SampleWidth",
+            "SampleHeight"
         ]);
 
-        var points = new List<Q13SamplePoint>();
+        var samples = new List<Q13ImportedSampleRow>();
         while (reader.ReadLine() is { } rawLine)
         {
             lineNumber++;
@@ -50,33 +63,37 @@ public static class Q13ResultSampleCsv
 
             var parts = SplitCsvLine(rawLine);
             var patchIndex = ParseInt(parts, indexes["Patch"], lineNumber, "Patch");
-            var centerX = (
-                ParseDouble(parts, indexes["SampleTopLeftX"], lineNumber, "SampleTopLeftX") +
-                ParseDouble(parts, indexes["SampleTopRightX"], lineNumber, "SampleTopRightX") +
-                ParseDouble(parts, indexes["SampleBottomRightX"], lineNumber, "SampleBottomRightX") +
-                ParseDouble(parts, indexes["SampleBottomLeftX"], lineNumber, "SampleBottomLeftX")) / 4.0;
-            var centerY = (
-                ParseDouble(parts, indexes["SampleTopLeftY"], lineNumber, "SampleTopLeftY") +
-                ParseDouble(parts, indexes["SampleTopRightY"], lineNumber, "SampleTopRightY") +
-                ParseDouble(parts, indexes["SampleBottomRightY"], lineNumber, "SampleBottomRightY") +
-                ParseDouble(parts, indexes["SampleBottomLeftY"], lineNumber, "SampleBottomLeftY")) / 4.0;
+            var centerX = ParseInt(parts, indexes["SampleCenterX"], lineNumber, "SampleCenterX");
+            var centerY = ParseInt(parts, indexes["SampleCenterY"], lineNumber, "SampleCenterY");
+            var width = ParseInt(parts, indexes["SampleWidth"], lineNumber, "SampleWidth");
+            var height = ParseInt(parts, indexes["SampleHeight"], lineNumber, "SampleHeight");
 
-            points.Add(new Q13SamplePoint(patchIndex, centerX, centerY));
+            samples.Add(new Q13ImportedSampleRow(patchIndex, centerX, centerY, width, height));
         }
 
-        if (points.Count != patchCount)
+        if (samples.Count != patchCount)
         {
-            throw new InvalidDataException($"Expected {patchCount} Q13 sample rows, but found {points.Count}.");
+            throw new InvalidDataException($"Expected {patchCount} Q13 sample rows, but found {samples.Count}.");
         }
 
         var expected = Enumerable.Range(0, patchCount).ToArray();
-        var actual = points.Select(point => point.PatchIndex).Order().ToArray();
+        var actual = samples.Select(sample => sample.PatchIndex).Order().ToArray();
         if (!actual.SequenceEqual(expected))
         {
             throw new InvalidDataException($"Q13 sample rows must use patch indexes 0 through {patchCount - 1} exactly once.");
         }
 
-        return points.OrderBy(point => point.PatchIndex).ToArray();
+        return samples.OrderBy(sample => sample.PatchIndex).ToArray();
+    }
+
+    private static int NormalizeSampleSize(int value)
+    {
+        if (value <= 0)
+        {
+            throw new InvalidDataException("Q13 sample width and height must be positive integers.");
+        }
+
+        return value % 2 == 0 ? value + 1 : value;
     }
 
     private static Dictionary<string, int> RequiredIndexes(IReadOnlyList<string> headers, IReadOnlyList<string> requiredHeaders)
@@ -121,3 +138,7 @@ public static class Q13ResultSampleCsv
         return line.Split(',').Select(part => part.Trim()).ToArray();
     }
 }
+
+public sealed record Q13ImportedSamples(IReadOnlyList<Q13SamplePoint> Centers, int SampleSize);
+
+internal sealed record Q13ImportedSampleRow(int PatchIndex, int CenterX, int CenterY, int Width, int Height);

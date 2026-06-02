@@ -151,6 +151,45 @@ public sealed class UniformityAnalyzerTests
         Assert.Equal(5.0, UniformityTolerances.WhiteBalanceDeltaEab(UniformityQualityLevel.ExtraLight));
     }
 
+    [Fact]
+    public void SavedUniformityReportCanBeReloadedAndReproduced()
+    {
+        var directory = Directory.CreateTempSubdirectory("imcheck-uniformity-roundtrip-");
+        var imagePath = Path.Combine(directory.FullName, "uniformity.png");
+        var firstCsvPath = Path.Combine(directory.FullName, "uniformity-first.csv");
+        var secondCsvPath = Path.Combine(directory.FullName, "uniformity-second.csv");
+        try
+        {
+            using var image = new Mat(180, 240, MatType.CV_8UC3);
+            for (var y = 0; y < image.Height; y++)
+            {
+                for (var x = 0; x < image.Width; x++)
+                {
+                    var value = (byte)(220 + x % 20);
+                    image.Set(y, x, new Vec3b(value, value, value));
+                }
+            }
+
+            Cv2.ImWrite(imagePath, image);
+            var analyzer = new UniformityAnalyzer();
+            var firstResult = analyzer.Analyze(imagePath);
+            File.WriteAllText(firstCsvPath, firstResult.ToCsv());
+
+            var importedSamples = UniformityResultSampleCsv.LoadSamples(firstCsvPath);
+            var secondResult = analyzer.Analyze(imagePath, new UniformityAnalysisOptions
+            {
+                Samples = importedSamples
+            });
+            File.WriteAllText(secondCsvPath, secondResult.ToCsv());
+
+            Assert.Equal(File.ReadAllText(firstCsvPath), File.ReadAllText(secondCsvPath));
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
     private static string CreateTempImage(int width, int height, Func<int, int, Vec3b> pixel)
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");

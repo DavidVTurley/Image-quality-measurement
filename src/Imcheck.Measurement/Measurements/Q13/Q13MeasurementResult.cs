@@ -46,7 +46,7 @@ public sealed record Q13MeasurementResult(
 
         if (IsColor)
         {
-            builder.AppendLine("Patch,OutputRed,OutputGreen,OutputBlue,NoiseRed,NoiseGreen,NoiseBlue,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
+            builder.AppendLine("Patch,OutputRed,OutputGreen,OutputBlue,NoiseRed,NoiseGreen,NoiseBlue,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight");
             foreach (var patch in Patches)
             {
                 builder.Append(patch.Index).Append(',')
@@ -56,33 +56,25 @@ public sealed record Q13MeasurementResult(
                     .Append(Format(patch.NoiseRed)).Append(',')
                     .Append(Format(patch.NoiseGreen)).Append(',')
                     .Append(Format(patch.NoiseBlue)).Append(',')
-                    .Append(Format(patch.SampleTopLeftX)).Append(',')
-                    .Append(Format(patch.SampleTopLeftY)).Append(',')
-                    .Append(Format(patch.SampleTopRightX)).Append(',')
-                    .Append(Format(patch.SampleTopRightY)).Append(',')
-                    .Append(Format(patch.SampleBottomRightX)).Append(',')
-                    .Append(Format(patch.SampleBottomRightY)).Append(',')
-                    .Append(Format(patch.SampleBottomLeftX)).Append(',')
-                    .Append(Format(patch.SampleBottomLeftY)).AppendLine();
+                    .Append(patch.SampleReportCenterX).Append(',')
+                    .Append(patch.SampleReportCenterY).Append(',')
+                    .Append(patch.SampleReportWidth).Append(',')
+                    .Append(patch.SampleReportHeight).AppendLine();
             }
 
             return builder.ToString();
         }
 
-        builder.AppendLine("Patch,Output,Noise,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
+        builder.AppendLine("Patch,Output,Noise,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight");
         foreach (var patch in Patches)
         {
             builder.Append(patch.Index).Append(',')
                 .Append(Format(patch.Output)).Append(',')
                 .Append(Format(patch.Noise)).Append(',')
-                .Append(Format(patch.SampleTopLeftX)).Append(',')
-                .Append(Format(patch.SampleTopLeftY)).Append(',')
-                .Append(Format(patch.SampleTopRightX)).Append(',')
-                .Append(Format(patch.SampleTopRightY)).Append(',')
-                .Append(Format(patch.SampleBottomRightX)).Append(',')
-                .Append(Format(patch.SampleBottomRightY)).Append(',')
-                .Append(Format(patch.SampleBottomLeftX)).Append(',')
-                .Append(Format(patch.SampleBottomLeftY)).AppendLine();
+                .Append(patch.SampleReportCenterX).Append(',')
+                .Append(patch.SampleReportCenterY).Append(',')
+                .Append(patch.SampleReportWidth).Append(',')
+                .Append(patch.SampleReportHeight).AppendLine();
         }
 
         return builder.ToString();

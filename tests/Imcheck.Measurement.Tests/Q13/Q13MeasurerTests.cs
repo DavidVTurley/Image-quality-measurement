@@ -28,7 +28,7 @@ public sealed class Q13MeasurerTests
             Assert.Equal(0, pair.First.Noise);
         });
         Assert.Contains("244\t0", result.ToImcheckText());
-        Assert.Contains("Patch,Output,Noise,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY", result.ToCsv());
+        Assert.Contains("Patch,Output,Noise,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight", result.ToCsv());
     }
 
     [Fact]
@@ -96,9 +96,9 @@ public sealed class Q13MeasurerTests
                 "1/gamma,1.00",
                 "Patch count,20",
                 "",
-                "Patch,Output,Noise,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY"
+                "Patch,Output,Noise,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight"
             }
-                .Concat(Enumerable.Range(0, 20).Select(i => FormattableString.Invariant($"{i},100,1,{i},100,{i + 2},100,{i + 2},104,{i},104")));
+                .Concat(Enumerable.Range(0, 20).Select(i => FormattableString.Invariant($"{i},100,1,{i + 1},102,5,5")));
             File.WriteAllLines(path, lines);
 
             var points = Q13ResultSampleCsv.LoadSampleCenters(path);

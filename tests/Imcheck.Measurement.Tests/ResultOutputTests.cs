@@ -44,12 +44,11 @@ public sealed class ResultOutputTests
         Assert.DoesNotContain("InputRed", csv);
         Assert.DoesNotContain("InputGreen", csv);
         Assert.DoesNotContain("InputBlue", csv);
-        Assert.Contains("Patch,OutputRed,OutputGreen,OutputBlue,NoiseRed,NoiseGreen,NoiseBlue,SampleTopLeftX,SampleTopLeftY", csv);
-        Assert.DoesNotContain("SampleCenterX", csv);
+        Assert.Contains("Patch,OutputRed,OutputGreen,OutputBlue,NoiseRed,NoiseGreen,NoiseBlue,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight", csv);
+        Assert.DoesNotContain("SampleTopLeftX", csv);
         Assert.DoesNotContain("SampleX", csv);
         Assert.DoesNotContain("SampleSize", csv);
-        Assert.Contains("SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY", csv);
-        Assert.Contains("0,101,102,103,1.1,1.2,1.3,10,20,15,20,15,25,10,25", csv);
+        Assert.Contains("0,101,102,103,1.1,1.2,1.3,12,24,5,5", csv);
     }
 
     [Fact]
@@ -63,15 +62,12 @@ public sealed class ResultOutputTests
         builder.AppendLine("1/gamma,1.00");
         builder.AppendLine("Patch count,20");
         builder.AppendLine();
-        builder.AppendLine("Patch,Output,Noise,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
+        builder.AppendLine("Patch,Output,Noise,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight");
         for (var patchIndex = 0; patchIndex < 20; patchIndex++)
         {
             builder.Append(patchIndex)
                 .Append(",100,1,")
-                .Append(patchIndex * 10).Append(",20,")
-                .Append(patchIndex * 10 + 4).Append(",20,")
-                .Append(patchIndex * 10 + 4).Append(",24,")
-                .Append(patchIndex * 10).Append(",24")
+                .Append(patchIndex * 10 + 2).Append(",22,5,5")
                 .AppendLine();
         }
 
@@ -86,6 +82,8 @@ public sealed class ResultOutputTests
             Assert.Equal(22, points[0].Y);
             Assert.Equal(192, points[19].X);
             Assert.Equal(22, points[19].Y);
+            var imported = Q13ResultSampleCsv.Load(path);
+            Assert.Equal(5, imported.SampleSize);
         }
         finally
         {

@@ -54,7 +54,7 @@ public sealed class Q13Measurer
 
         return new Q13MeasurementResult(
             imagePath,
-            EstimateSamplingPixelsPerInch(image.Width, options.PatchCount),
+            EstimateSamplingPixelsPerInch(sampleCenters, image.Width, options.PatchCount),
             sampleSize,
             CalculateInverseGamma(patches, channel: 0),
             CalculateInverseGamma(patches, channel: 1),
@@ -204,7 +204,6 @@ public sealed class Q13Measurer
         };
 
         using var transform = Cv2.GetPerspectiveTransform(geometry.SourcePoints(), destination);
-        using var inverseTransform = Cv2.GetPerspectiveTransform(destination, geometry.SourcePoints());
         Cv2.WarpPerspective(image, warped, transform, new Size(stripWidth, stripHeight), InterpolationFlags.Linear, BorderTypes.Replicate);
 
         var targets = Q13Target.KodakPatches;
@@ -220,40 +219,24 @@ public sealed class Q13Measurer
             var centerY = region.CenterY * stripHeight;
             var rect = MeasurementGeometry.CenteredSquare(stripWidth, stripHeight, sampleSize, centerX, centerY);
             using var roi = new Mat(warped, rect);
-            var topLeft = TransformPoint(inverseTransform, rect.X, rect.Y);
-            var topRight = TransformPoint(inverseTransform, rect.X + rect.Width, rect.Y);
-            var bottomRight = TransformPoint(inverseTransform, rect.X + rect.Width, rect.Y + rect.Height);
-            var bottomLeft = TransformPoint(inverseTransform, rect.X, rect.Y + rect.Height);
-            var originalCenter = TransformPoint(inverseTransform, centerX, centerY);
+            var originalCenter = geometry.PointAt(region.CenterX, region.CenterY);
             patches.Add(MeasurePatch(roi, targets[region.PatchIndex], region.PatchIndex, channels, originalCenter.X, originalCenter.Y, rect) with
             {
-                ReportSampleTopLeftX = topLeft.X,
-                ReportSampleTopLeftY = topLeft.Y,
-                ReportSampleTopRightX = topRight.X,
-                ReportSampleTopRightY = topRight.Y,
-                ReportSampleBottomRightX = bottomRight.X,
-                ReportSampleBottomRightY = bottomRight.Y,
-                ReportSampleBottomLeftX = bottomLeft.X,
-                ReportSampleBottomLeftY = bottomLeft.Y
+                ReportSampleCenterX = (int)Math.Round(originalCenter.X),
+                ReportSampleCenterY = (int)Math.Round(originalCenter.Y),
+                ReportSampleWidth = sampleSize,
+                ReportSampleHeight = sampleSize
             });
         }
 
         return new Q13MeasurementResult(
             imagePath,
-            EstimateSamplingPixelsPerInch(stripWidth, options.PatchCount),
+            EstimateSamplingPixelsPerInch((int)Math.Round(geometry.Width), options.PatchCount),
             patches[0].SampleSize,
             CalculateInverseGamma(patches, channel: 0),
             CalculateInverseGamma(patches, channel: 1),
             CalculateInverseGamma(patches, channel: 2),
             patches);
-    }
-
-    private static Q13Point TransformPoint(Mat transform, double x, double y)
-    {
-        var scale = transform.At<double>(2, 0) * x + transform.At<double>(2, 1) * y + transform.At<double>(2, 2);
-        return new Q13Point(
-            (transform.At<double>(0, 0) * x + transform.At<double>(0, 1) * y + transform.At<double>(0, 2)) / scale,
-            (transform.At<double>(1, 0) * x + transform.At<double>(1, 1) * y + transform.At<double>(1, 2)) / scale);
     }
 
     private static double CalculateInverseGamma(IReadOnlyList<PatchMeasurement> patches, int channel)
@@ -302,6 +285,24 @@ public sealed class Q13Measurer
     {
         // Kodak Q-13 gray scale is nominally 8 inches wide.
         return imageWidth / 8.0 * 300.0 / 297.0;
+    }
+
+    private static double EstimateSamplingPixelsPerInch(IReadOnlyList<Q13SamplePoint> sampleCenters, int fallbackImageWidth, int patchCount)
+    {
+        if (sampleCenters.Count >= 2)
+        {
+            var ordered = sampleCenters.OrderBy(point => point.PatchIndex).ToArray();
+            var first = ordered[0];
+            var last = ordered[^1];
+            var centerSpan = Math.Sqrt(Math.Pow(last.X - first.X, 2) + Math.Pow(last.Y - first.Y, 2));
+            if (centerSpan > 0)
+            {
+                var inferredStripWidth = centerSpan * patchCount / Math.Max(1, patchCount - 1);
+                return EstimateSamplingPixelsPerInch((int)Math.Round(inferredStripWidth), patchCount);
+            }
+        }
+
+        return EstimateSamplingPixelsPerInch(fallbackImageWidth, patchCount);
     }
 
 }

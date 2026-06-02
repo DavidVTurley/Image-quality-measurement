@@ -278,7 +278,8 @@ public partial class MainWindow
 
     private void MeasureQ13FromResultsCsv(string imagePath, string csvPath, string statusText)
     {
-        _q13SampleCenters = Q13ResultSampleCsv.LoadSampleCenters(csvPath);
+        var importedSamples = Q13ResultSampleCsv.Load(csvPath);
+        _q13SampleCenters = importedSamples.Centers;
         _acceptedQ13Geometry = null;
         _acceptedQ13Regions = null;
         _pendingQ13ImagePath = null;
@@ -286,7 +287,11 @@ public partial class MainWindow
         _pendingQ13Regions = [];
         _q13ManualPoints.Clear();
 
-        _currentQ13Result = _q13Measurer.Measure(imagePath, new Q13MeasurementOptions { SampleCenters = _q13SampleCenters });
+        _currentQ13Result = _q13Measurer.Measure(imagePath, new Q13MeasurementOptions
+        {
+            SampleCenters = _q13SampleCenters,
+            SampleSize = importedSamples.SampleSize
+        });
         Q13FileNameText.Text = imagePath;
         Q13PreviewImage.Source = LoadBitmap(imagePath);
         Q13ResultsView.Visibility = Visibility.Visible;
@@ -415,21 +420,24 @@ public partial class MainWindow
 
         foreach (var patch in _currentQ13Result.Patches)
         {
-            var polygon = new Polygon
+            var topLeft = ImageToQ13PreviewDisplayPoint(
+                new Q13Point(
+                    patch.SampleReportCenterX - patch.SampleReportWidth / 2.0,
+                    patch.SampleReportCenterY - patch.SampleReportHeight / 2.0),
+                bitmap,
+                transform.Value);
+            var rectangle = new Rectangle
             {
+                Width = patch.SampleReportWidth / (double)bitmap.PixelWidth * transform.Value.DisplayedWidth,
+                Height = patch.SampleReportHeight / (double)bitmap.PixelHeight * transform.Value.DisplayedHeight,
                 Stroke = Brushes.Red,
                 StrokeThickness = 2,
-                Fill = Brushes.Transparent,
-                Points = new PointCollection(
-                [
-                    ImageToQ13PreviewDisplayPoint(new Q13Point(patch.SampleTopLeftX, patch.SampleTopLeftY), bitmap, transform.Value),
-                    ImageToQ13PreviewDisplayPoint(new Q13Point(patch.SampleTopRightX, patch.SampleTopRightY), bitmap, transform.Value),
-                    ImageToQ13PreviewDisplayPoint(new Q13Point(patch.SampleBottomRightX, patch.SampleBottomRightY), bitmap, transform.Value),
-                    ImageToQ13PreviewDisplayPoint(new Q13Point(patch.SampleBottomLeftX, patch.SampleBottomLeftY), bitmap, transform.Value)
-                ])
+                Fill = Brushes.Transparent
             };
 
-            Q13OverlayCanvas.Children.Add(polygon);
+            Canvas.SetLeft(rectangle, topLeft.X);
+            Canvas.SetTop(rectangle, topLeft.Y);
+            Q13OverlayCanvas.Children.Add(rectangle);
         }
     }
 

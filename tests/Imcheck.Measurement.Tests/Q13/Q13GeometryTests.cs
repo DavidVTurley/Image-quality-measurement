@@ -72,7 +72,7 @@ public sealed class Q13GeometryTests
     }
 
     [Fact]
-    public void StripGeometryCsvExportsOriginalImageSampleCoordinates()
+    public void StripGeometryCsvExportsOriginalImageIntegerCentersAndOddSquareSize()
     {
         using var image = CreateRotatedQ13Image(out var geometry, out _);
         var imagePath = WriteTempImage(image);
@@ -86,20 +86,56 @@ public sealed class Q13GeometryTests
             });
             File.WriteAllText(csvPath, result.ToCsv());
 
-            var importedCenters = Q13ResultSampleCsv.LoadSampleCenters(csvPath);
+            var importedSamples = Q13ResultSampleCsv.Load(csvPath);
+            var importedCenters = importedSamples.Centers;
 
             Assert.Equal(20, importedCenters.Count);
             var firstExpected = geometry.PointAt(0.025, 0.5);
-            Assert.InRange(importedCenters[0].X, firstExpected.X - 0.75, firstExpected.X + 0.75);
-            Assert.InRange(importedCenters[0].Y, firstExpected.Y - 0.75, firstExpected.Y + 0.75);
+            Assert.InRange(importedCenters[0].X, Math.Round(firstExpected.X) - 1, Math.Round(firstExpected.X) + 1);
+            Assert.InRange(importedCenters[0].Y, Math.Round(firstExpected.Y) - 1, Math.Round(firstExpected.Y) + 1);
             var lastExpected = geometry.PointAt(0.975, 0.5);
-            Assert.InRange(importedCenters[19].X, lastExpected.X - 0.75, lastExpected.X + 0.75);
-            Assert.InRange(importedCenters[19].Y, lastExpected.Y - 0.75, lastExpected.Y + 0.75);
+            Assert.InRange(importedCenters[19].X, Math.Round(lastExpected.X) - 1, Math.Round(lastExpected.X) + 1);
+            Assert.InRange(importedCenters[19].Y, Math.Round(lastExpected.Y) - 1, Math.Round(lastExpected.Y) + 1);
+            Assert.True(importedSamples.SampleSize % 2 == 1);
         }
         finally
         {
             File.Delete(imagePath);
             File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
+    public void SavedQ13ReportCanBeReloadedAndReproduced()
+    {
+        using var image = CreateAxisAlignedQ13Image(out var geometry);
+        var directory = Directory.CreateTempSubdirectory("imcheck-q13-roundtrip-");
+        var imagePath = Path.Combine(directory.FullName, "q13.png");
+        var firstCsvPath = Path.Combine(directory.FullName, "q13-first.csv");
+        var secondCsvPath = Path.Combine(directory.FullName, "q13-second.csv");
+        try
+        {
+            Cv2.ImWrite(imagePath, image);
+            var firstResult = new Q13Measurer().Measure(imagePath, new Q13MeasurementOptions
+            {
+                StripGeometry = geometry,
+                SampleRegions = Q13StripGeometry.CreateDefaultSampleRegions(normalizedSampleSize: 0.18)
+            });
+            File.WriteAllText(firstCsvPath, firstResult.ToCsv());
+
+            var importedSamples = Q13ResultSampleCsv.Load(firstCsvPath);
+            var secondResult = new Q13Measurer().Measure(imagePath, new Q13MeasurementOptions
+            {
+                SampleCenters = importedSamples.Centers,
+                SampleSize = importedSamples.SampleSize
+            });
+            File.WriteAllText(secondCsvPath, secondResult.ToCsv());
+
+            Assert.Equal(File.ReadAllText(firstCsvPath), File.ReadAllText(secondCsvPath));
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
         }
     }
 
@@ -218,6 +254,24 @@ public sealed class Q13GeometryTests
             };
             var value = expected[index];
             Cv2.FillConvexPoly(image, points, new Scalar(value, value, value), LineTypes.AntiAlias);
+        }
+
+        return image;
+    }
+
+    private static Mat CreateAxisAlignedQ13Image(out Q13StripGeometry geometry)
+    {
+        const int patchWidth = 32;
+        var image = new Mat(110, patchWidth * 20 + 80, MatType.CV_8UC3, new Scalar(245, 245, 245));
+        geometry = new Q13StripGeometry(
+            new Q13Point(40, 28),
+            new Q13Point(40 + patchWidth * 20, 28),
+            new Q13Point(40 + patchWidth * 20, 82));
+
+        for (var index = 0; index < 20; index++)
+        {
+            var value = 246 - index * 10;
+            Cv2.Rectangle(image, new Rect(40 + index * patchWidth, 28, patchWidth, 54), new Scalar(value, value, value), -1);
         }
 
         return image;
