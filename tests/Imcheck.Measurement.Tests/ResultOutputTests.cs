@@ -131,12 +131,13 @@ public sealed class ResultOutputTests
     {
         var path = Path.Combine(Path.GetTempPath(), $"uniformity-result-{Guid.NewGuid():N}.csv");
         var csv = """
-Section,Metric,Value,Tolerance,Pass
-Illumination,MaxDeltaLStar,0,Not specified,Not specified
-WhiteBalance,MaxDeltaEab,0,2,Pass
+Image,1200x800,8-bit
+Sample size,35x35
+Max delta L*,0,Not specified,Not specified
+Max delta Eab,0,2,Pass
 
-Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY
-Center,100,100,100,50,0,0,10,20,45,20,45,55,10,55
+Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight
+Center,100,100,100,50,0,0,28,38,35,35
 """;
 
         File.WriteAllText(path, csv);
@@ -146,8 +147,8 @@ Center,100,100,100,50,0,0,10,20,45,20,45,55,10,55
 
             Assert.Single(samples);
             Assert.Equal("Center", samples[0].Name);
-            Assert.Equal(27.5, samples[0].CenterX);
-            Assert.Equal(37.5, samples[0].CenterY);
+            Assert.Equal(28, samples[0].CenterX);
+            Assert.Equal(38, samples[0].CenterY);
             Assert.Equal(35, samples[0].SampleSize);
         }
         finally
@@ -194,7 +195,8 @@ Center,100,100,100,50,0,0,10,20,45,20,45,55,10,55
         Assert.Contains("Sample size,35x35", csv);
         Assert.Contains("Max delta L*,1.2345,3,Pass", csv);
         Assert.Contains("Max delta Eab,2.3456,4,Pass", csv);
-        Assert.Contains("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleTopLeftX,SampleTopLeftY", csv);
-        Assert.Contains("Center,100,101,102,50,0.1,0.2,10,20,45,20,45,55,10,55", csv);
+        Assert.Contains("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight", csv);
+        Assert.DoesNotContain("SampleTopLeftX", csv);
+        Assert.Contains("Center,100,101,102,50,0.1,0.2,28,38,35,35", csv);
     }
 }

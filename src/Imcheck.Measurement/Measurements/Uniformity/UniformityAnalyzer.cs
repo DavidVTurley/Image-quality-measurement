@@ -88,8 +88,8 @@ public sealed class UniformityAnalyzer
     {
         var cellWidth = image.Width / 3.0;
         var cellHeight = image.Height / 3.0;
-        var centerX = (point.Column + 0.5) * cellWidth - 0.5;
-        var centerY = (point.Row + 0.5) * cellHeight - 0.5;
+        var centerX = Math.Round((point.Column + 0.5) * cellWidth - 0.5);
+        var centerY = Math.Round((point.Row + 0.5) * cellHeight - 0.5);
         var rect = MeasurementGeometry.CenteredSquare(image.Width, image.Height, sampleSize, centerX, centerY);
         using var roi = new Mat(image, rect);
 
@@ -322,7 +322,7 @@ public sealed record UniformityAnalysisResult(
         AppendSummary(builder, "Max delta L*", MaxDeltaLStar, IlluminationDeltaLStarTolerance, IlluminationPass);
         AppendSummary(builder, "Max delta Eab", MaxDeltaEab, WhiteBalanceDeltaEabTolerance, WhiteBalancePass);
         builder.AppendLine();
-        builder.AppendLine("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
+        builder.AppendLine("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight");
         foreach (var sample in Samples)
         {
             builder.Append(sample.Name).Append(',')
@@ -332,14 +332,10 @@ public sealed record UniformityAnalysisResult(
                 .Append(Format(sample.LStar)).Append(',')
                 .Append(Format(sample.AStar)).Append(',')
                 .Append(Format(sample.BStar)).Append(',')
-                .Append(sample.SampleTopLeftX).Append(',')
-                .Append(sample.SampleTopLeftY).Append(',')
-                .Append(sample.SampleTopRightX).Append(',')
-                .Append(sample.SampleTopRightY).Append(',')
-                .Append(sample.SampleBottomRightX).Append(',')
-                .Append(sample.SampleBottomRightY).Append(',')
-                .Append(sample.SampleBottomLeftX).Append(',')
-                .Append(sample.SampleBottomLeftY).AppendLine();
+                .Append(sample.SampleReportCenterX).Append(',')
+                .Append(sample.SampleReportCenterY).Append(',')
+                .Append(sample.SampleReportWidth).Append(',')
+                .Append(sample.SampleReportHeight).AppendLine();
         }
 
         return builder.ToString();
@@ -373,21 +369,13 @@ public sealed record WhiteSheetSampleMeasurement(
     double AStar,
     double BStar)
 {
-    public int SampleTopLeftX => SampleX;
+    public int SampleReportCenterX => (int)Math.Round(SampleCenterX);
 
-    public int SampleTopLeftY => SampleY;
+    public int SampleReportCenterY => (int)Math.Round(SampleCenterY);
 
-    public int SampleTopRightX => SampleX + SampleSize;
+    public int SampleReportWidth => SampleSize;
 
-    public int SampleTopRightY => SampleY;
-
-    public int SampleBottomRightX => SampleX + SampleSize;
-
-    public int SampleBottomRightY => SampleY + SampleSize;
-
-    public int SampleBottomLeftX => SampleX;
-
-    public int SampleBottomLeftY => SampleY + SampleSize;
+    public int SampleReportHeight => SampleSize;
 }
 
 public enum RgbColorSpace

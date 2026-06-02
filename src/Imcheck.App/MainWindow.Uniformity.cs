@@ -177,18 +177,36 @@ public partial class MainWindow
         var (displayedWidth, displayedHeight, offsetX, offsetY) = transform.Value;
         foreach (var sample in _currentUniformityResult.Samples)
         {
+            var topLeft = ImageToUniformityPreviewDisplayPoint(
+                sample.SampleReportCenterX - sample.SampleReportWidth / 2.0,
+                sample.SampleReportCenterY - sample.SampleReportHeight / 2.0,
+                _currentUniformityResult.ImageWidth,
+                _currentUniformityResult.ImageHeight,
+                transform.Value);
             var rectangle = new Rectangle
             {
-                Width = sample.SampleSize / (double)_currentUniformityResult.ImageWidth * displayedWidth,
-                Height = sample.SampleSize / (double)_currentUniformityResult.ImageHeight * displayedHeight,
+                Width = sample.SampleReportWidth / (double)_currentUniformityResult.ImageWidth * displayedWidth,
+                Height = sample.SampleReportHeight / (double)_currentUniformityResult.ImageHeight * displayedHeight,
                 Stroke = Brushes.Red,
                 StrokeThickness = 2,
                 Fill = Brushes.Transparent
             };
 
-            Canvas.SetLeft(rectangle, offsetX + sample.SampleX / (double)_currentUniformityResult.ImageWidth * displayedWidth);
-            Canvas.SetTop(rectangle, offsetY + sample.SampleY / (double)_currentUniformityResult.ImageHeight * displayedHeight);
+            Canvas.SetLeft(rectangle, topLeft.X);
+            Canvas.SetTop(rectangle, topLeft.Y);
             UniformityOverlayCanvas.Children.Add(rectangle);
         }
+    }
+
+    private static Point ImageToUniformityPreviewDisplayPoint(
+        double x,
+        double y,
+        int imageWidth,
+        int imageHeight,
+        (double DisplayedWidth, double DisplayedHeight, double OffsetX, double OffsetY) transform)
+    {
+        return new Point(
+            transform.OffsetX + x / imageWidth * transform.DisplayedWidth,
+            transform.OffsetY + y / imageHeight * transform.DisplayedHeight);
     }
 }

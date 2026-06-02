@@ -1,5 +1,4 @@
 using System.Globalization;
-using Imcheck.Measurement.Measurements.Common;
 
 namespace Imcheck.Measurement.Measurements.Uniformity;
 
@@ -30,14 +29,10 @@ public static class UniformityResultSampleCsv
         var indexes = RequiredIndexes(headers,
         [
             "Name",
-            "SampleTopLeftX",
-            "SampleTopLeftY",
-            "SampleTopRightX",
-            "SampleTopRightY",
-            "SampleBottomRightX",
-            "SampleBottomRightY",
-            "SampleBottomLeftX",
-            "SampleBottomLeftY"
+            "SampleCenterX",
+            "SampleCenterY",
+            "SampleWidth",
+            "SampleHeight"
         ]);
 
         var samples = new List<UniformitySampleLocation>();
@@ -51,18 +46,11 @@ public static class UniformityResultSampleCsv
 
             var parts = SplitCsvLine(rawLine);
             var name = ParseString(parts, indexes["Name"], lineNumber, "Name");
-            var topLeftX = ParseDouble(parts, indexes["SampleTopLeftX"], lineNumber, "SampleTopLeftX");
-            var topLeftY = ParseDouble(parts, indexes["SampleTopLeftY"], lineNumber, "SampleTopLeftY");
-            var topRightX = ParseDouble(parts, indexes["SampleTopRightX"], lineNumber, "SampleTopRightX");
-            var topRightY = ParseDouble(parts, indexes["SampleTopRightY"], lineNumber, "SampleTopRightY");
-            var bottomRightX = ParseDouble(parts, indexes["SampleBottomRightX"], lineNumber, "SampleBottomRightX");
-            var bottomRightY = ParseDouble(parts, indexes["SampleBottomRightY"], lineNumber, "SampleBottomRightY");
-            var bottomLeftX = ParseDouble(parts, indexes["SampleBottomLeftX"], lineNumber, "SampleBottomLeftX");
-            var bottomLeftY = ParseDouble(parts, indexes["SampleBottomLeftY"], lineNumber, "SampleBottomLeftY");
-
-            var centerX = (topLeftX + topRightX + bottomRightX + bottomLeftX) / 4.0;
-            var centerY = (topLeftY + topRightY + bottomRightY + bottomLeftY) / 4.0;
-            var sampleSize = MeasurementMath.MakeOdd((int)Math.Round(((topRightX - topLeftX) + (bottomRightX - bottomLeftX) + (bottomLeftY - topLeftY) + (bottomRightY - topRightY)) / 4.0));
+            var centerX = ParseInt(parts, indexes["SampleCenterX"], lineNumber, "SampleCenterX");
+            var centerY = ParseInt(parts, indexes["SampleCenterY"], lineNumber, "SampleCenterY");
+            var width = ParseInt(parts, indexes["SampleWidth"], lineNumber, "SampleWidth");
+            var height = ParseInt(parts, indexes["SampleHeight"], lineNumber, "SampleHeight");
+            var sampleSize = NormalizeSampleSize(Math.Min(width, height));
 
             samples.Add(new UniformitySampleLocation(name, centerX, centerY, sampleSize));
         }
@@ -73,6 +61,16 @@ public static class UniformityResultSampleCsv
         }
 
         return samples;
+    }
+
+    private static int NormalizeSampleSize(int value)
+    {
+        if (value <= 0)
+        {
+            throw new InvalidDataException("Uniformity sample width and height must be positive integers.");
+        }
+
+        return value % 2 == 0 ? value + 1 : value;
     }
 
     private static Dictionary<string, int> RequiredIndexes(IReadOnlyList<string> headers, IReadOnlyList<string> requiredHeaders)
@@ -102,9 +100,9 @@ public static class UniformityResultSampleCsv
         return parts[index].Trim();
     }
 
-    private static double ParseDouble(IReadOnlyList<string> parts, int index, int lineNumber, string column)
+    private static int ParseInt(IReadOnlyList<string> parts, int index, int lineNumber, string column)
     {
-        if (index >= parts.Count || !double.TryParse(parts[index], NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+        if (index >= parts.Count || !int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
         {
             throw new InvalidDataException($"Line {lineNumber} has an invalid '{column}' value.");
         }

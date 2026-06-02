@@ -20,9 +20,9 @@ public sealed class UniformityAnalyzerTests
             Assert.True(result.WhiteBalancePass);
             Assert.Equal(0, result.MaxDeltaLStar, precision: 4);
             Assert.Equal(0, result.MaxDeltaEab, precision: 4);
-            Assert.Contains("Illumination,MaxDeltaLStar", result.ToCsv());
-            Assert.Contains("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY", result.ToCsv());
-            Assert.DoesNotContain("SampleCenterX", result.ToCsv());
+            Assert.Contains("Max delta L*", result.ToCsv());
+            Assert.Contains("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight", result.ToCsv());
+            Assert.DoesNotContain("SampleTopLeftX", result.ToCsv());
         }
         finally
         {
@@ -39,11 +39,11 @@ public sealed class UniformityAnalyzerTests
             var result = new UniformityAnalyzer().Analyze(path);
 
             Assert.Equal(33, result.SampleSize);
-            Assert.Equal(("TopLeft", 49.5, 49.5, 33), SampleShape(result.Samples[0]));
-            Assert.Equal(("TopRight", 249.5, 49.5, 33), SampleShape(result.Samples[1]));
-            Assert.Equal(("Center", 149.5, 149.5, 33), SampleShape(result.Samples[2]));
-            Assert.Equal(("BottomLeft", 49.5, 249.5, 33), SampleShape(result.Samples[3]));
-            Assert.Equal(("BottomRight", 249.5, 249.5, 33), SampleShape(result.Samples[4]));
+            Assert.Equal(("TopLeft", 50.0, 50.0, 33), SampleShape(result.Samples[0]));
+            Assert.Equal(("TopRight", 250.0, 50.0, 33), SampleShape(result.Samples[1]));
+            Assert.Equal(("Center", 150.0, 150.0, 33), SampleShape(result.Samples[2]));
+            Assert.Equal(("BottomLeft", 50.0, 250.0, 33), SampleShape(result.Samples[3]));
+            Assert.Equal(("BottomRight", 250.0, 250.0, 33), SampleShape(result.Samples[4]));
         }
         finally
         {
@@ -154,10 +154,26 @@ public sealed class UniformityAnalyzerTests
     [Fact]
     public void SavedUniformityReportCanBeReloadedAndReproduced()
     {
+        AssertUniformityReportCanBeReloadedAndReproduced("white", (_, _) => new Vec3b(255, 255, 255));
+        AssertUniformityReportCanBeReloadedAndReproduced("black", (_, _) => new Vec3b(0, 0, 0));
+        AssertUniformityReportCanBeReloadedAndReproduced("midgray", (_, _) => new Vec3b(127, 127, 127));
+        AssertUniformityReportCanBeReloadedAndReproduced(
+            "varying",
+            (x, y) =>
+            {
+                var blue = (byte)((x * 7 + y * 11) % 256);
+                var green = (byte)((x * 13 + y * 3) % 256);
+                var red = (byte)((x * 5 + y * 17) % 256);
+                return new Vec3b(blue, green, red);
+            });
+    }
+
+    private static void AssertUniformityReportCanBeReloadedAndReproduced(string name, Func<int, int, Vec3b> pixel)
+    {
         var directory = Directory.CreateTempSubdirectory("imcheck-uniformity-roundtrip-");
-        var imagePath = Path.Combine(directory.FullName, "uniformity.png");
-        var firstCsvPath = Path.Combine(directory.FullName, "uniformity-first.csv");
-        var secondCsvPath = Path.Combine(directory.FullName, "uniformity-second.csv");
+        var imagePath = Path.Combine(directory.FullName, $"{name}.png");
+        var firstCsvPath = Path.Combine(directory.FullName, $"{name}-first.csv");
+        var secondCsvPath = Path.Combine(directory.FullName, $"{name}-second.csv");
         try
         {
             using var image = new Mat(180, 240, MatType.CV_8UC3);
@@ -165,8 +181,7 @@ public sealed class UniformityAnalyzerTests
             {
                 for (var x = 0; x < image.Width; x++)
                 {
-                    var value = (byte)(220 + x % 20);
-                    image.Set(y, x, new Vec3b(value, value, value));
+                    image.Set(y, x, pixel(x, y));
                 }
             }
 
