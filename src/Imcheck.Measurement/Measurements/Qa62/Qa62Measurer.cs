@@ -1,10 +1,11 @@
 using System.Numerics;
+using Imcheck.Measurement.Measurements;
 using Imcheck.Measurement.Measurements.Common;
 using OpenCvSharp;
 
 namespace Imcheck.Measurement.Measurements.Qa62;
 
-public sealed class Qa62Measurer
+public sealed class Qa62Measurer : IImageMeasurer<Qa62MeasurementOptions, Qa62MeasurementResult>
 {
     private const int PatchCount = 20;
     private const int Oversampling = 4;
@@ -42,22 +43,8 @@ public sealed class Qa62Measurer
 
         options ??= new Qa62MeasurementOptions();
 
-        using var image = Cv2.ImRead(imagePath, ImreadModes.Unchanged);
-        if (image.Empty())
-        {
-            throw new InvalidOperationException($"Unable to load image: {imagePath}");
-        }
-
-        if (image.Depth() != MatType.CV_8U)
-        {
-            throw new NotSupportedException("Only 8-bit images are supported in the QA-62 implementation.");
-        }
-
-        var channels = image.Channels();
-        if (channels is not (1 or 3 or 4))
-        {
-            throw new NotSupportedException($"Unsupported channel count: {channels}.");
-        }
+        using var image = ImageValidation.LoadRequired(imagePath, ImreadModes.Unchanged, "QA-62 measurement");
+        var channels = ImageValidation.RequireEightBitChannels(image, "QA-62");
 
         var bounds = options.TargetBounds ?? new Qa62TargetBounds(0, 0, image.Width, image.Height);
         var sampleSize = options.SampleSize ?? AutoPatchSampleSize(bounds);
@@ -81,55 +68,21 @@ public sealed class Qa62Measurer
         {
             var centerX = bounds.X + PatchCenters[i].X * bounds.Width;
             var centerY = bounds.Y + PatchCenters[i].Y * bounds.Height;
-            var rect = MeasurementGeometry.CenteredSquare(image.Width, image.Height, sampleSize, centerX, centerY);
-            using var roi = new Mat(image, rect);
+            var statistics = PatchSampler.SampleCenteredSquare(image, channels, sampleSize, centerX, centerY);
 
-            if (channels == 1)
-            {
-                var (mean, noise) = ImageStatistics.MeanAndPopulationStdDev(roi);
-                patches.Add(new Qa62PatchMeasurement(
-                    i + 1,
-                    mean,
-                    mean,
-                    mean,
-                    noise,
-                    noise,
-                    noise,
-                    centerX,
-                    centerY,
-                    rect.X,
-                    rect.Y,
-                    rect.Width));
-                continue;
-            }
-
-            Cv2.Split(roi, out var splitChannels);
-            try
-            {
-                var (blueMean, blueNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[0]);
-                var (greenMean, greenNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[1]);
-                var (redMean, redNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[2]);
-                patches.Add(new Qa62PatchMeasurement(
-                    i + 1,
-                    redMean,
-                    greenMean,
-                    blueMean,
-                    redNoise,
-                    greenNoise,
-                    blueNoise,
-                    centerX,
-                    centerY,
-                    rect.X,
-                    rect.Y,
-                    rect.Width));
-            }
-            finally
-            {
-                foreach (var channel in splitChannels)
-                {
-                    channel.Dispose();
-                }
-            }
+            patches.Add(new Qa62PatchMeasurement(
+                i + 1,
+                statistics.RedMean,
+                statistics.GreenMean,
+                statistics.BlueMean,
+                statistics.RedNoise,
+                statistics.GreenNoise,
+                statistics.BlueNoise,
+                centerX,
+                centerY,
+                statistics.X,
+                statistics.Y,
+                statistics.Size));
         }
 
         return patches;

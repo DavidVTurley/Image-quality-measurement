@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Imcheck.Measurement.Measurements;
 
 namespace Imcheck.Measurement.Measurements.Q13;
 
@@ -10,7 +11,7 @@ public sealed record Q13MeasurementResult(
     double InverseGammaRed,
     double InverseGammaGreen,
     double InverseGammaBlue,
-    IReadOnlyList<PatchMeasurement> Patches)
+    IReadOnlyList<PatchMeasurement> Patches) : IImageMeasurementResult
 {
     public double InverseGamma => InverseGammaBlue;
 

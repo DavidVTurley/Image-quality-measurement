@@ -1,9 +1,10 @@
 using Imcheck.Measurement.Measurements.Common;
+using Imcheck.Measurement.Measurements;
 using OpenCvSharp;
 
 namespace Imcheck.Measurement.Measurements.Q13;
 
-public sealed class Q13Measurer
+public sealed class Q13Measurer : IImageMeasurer<Q13MeasurementOptions, Q13MeasurementResult>
 {
     public Q13MeasurementResult Measure(string imagePath, Q13MeasurementOptions? options = null)
     {
@@ -15,26 +16,11 @@ public sealed class Q13Measurer
         options ??= new Q13MeasurementOptions();
         ValidateOptions(options);
 
-        using var image = Cv2.ImRead(imagePath, ImreadModes.Unchanged);
-        if (image.Empty())
-        {
-            throw new InvalidOperationException($"Unable to load image: {imagePath}");
-        }
-
-        if (image.Depth() != MatType.CV_8U)
-        {
-            throw new NotSupportedException("Only 8-bit images are supported in the reference-first implementation.");
-        }
-
-        var channels = image.Channels();
-        if (channels is not (1 or 3 or 4))
-        {
-            throw new NotSupportedException($"Unsupported channel count: {channels}.");
-        }
+        using var image = ImageValidation.LoadRequired(imagePath, ImreadModes.Unchanged, "Q13 measurement");
+        var channels = ImageValidation.RequireEightBitChannels(image, "reference-first");
 
         var sampleSize = options.SampleSize;
         var patches = new List<PatchMeasurement>(options.PatchCount);
-        var targets = Q13Target.KodakPatches;
 
         if (options.StripGeometry is not null)
         {
@@ -45,11 +31,8 @@ public sealed class Q13Measurer
 
         for (var patchIndex = 0; patchIndex < options.PatchCount; patchIndex++)
         {
-            var target = targets[patchIndex];
             var center = sampleCenters[patchIndex];
-            var rect = MeasurementGeometry.CenteredSquare(image.Width, image.Height, sampleSize, center.X, center.Y);
-            using var roi = new Mat(image, rect);
-            patches.Add(MeasurePatch(roi, target, patchIndex, channels, center.X, center.Y, rect));
+            patches.Add(MeasurePatch(image, patchIndex, channels, sampleSize, center.X, center.Y));
         }
 
         return new Q13MeasurementResult(
@@ -136,56 +119,28 @@ public sealed class Q13Measurer
             .ToArray();
     }
 
-    private static PatchMeasurement MeasurePatch(Mat roi, Q13TargetPatch target, int patchIndex, int channels, double centerX, double centerY, Rect rect)
+    private static PatchMeasurement MeasurePatch(Mat image, int patchIndex, int channels, int sampleSize, double centerX, double centerY)
     {
-        if (channels == 1)
-        {
-            var (mean, noise) = ImageStatistics.MeanAndPopulationStdDev(roi);
-            return new PatchMeasurement(
-                patchIndex,
-                mean,
-                mean,
-                mean,
-                noise,
-                noise,
-                noise,
-                IsColor: false,
-                centerX,
-                centerY,
-                rect.X,
-                rect.Y,
-                rect.Width);
-        }
+        var statistics = PatchSampler.SampleCenteredSquare(image, channels, sampleSize, centerX, centerY);
+        return CreatePatchMeasurement(patchIndex, statistics);
+    }
 
-        Cv2.Split(roi, out var splitChannels);
-        try
-        {
-            var (blueMean, blueNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[0]);
-            var (greenMean, greenNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[1]);
-            var (redMean, redNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[2]);
-
-            return new PatchMeasurement(
-                patchIndex,
-                redMean,
-                greenMean,
-                blueMean,
-                redNoise,
-                greenNoise,
-                blueNoise,
-                IsColor: true,
-                centerX,
-                centerY,
-                rect.X,
-                rect.Y,
-                rect.Width);
-        }
-        finally
-        {
-            foreach (var channel in splitChannels)
-            {
-                channel.Dispose();
-            }
-        }
+    private static PatchMeasurement CreatePatchMeasurement(int patchIndex, RgbPatchStatistics statistics)
+    {
+        return new PatchMeasurement(
+            patchIndex,
+            statistics.RedMean,
+            statistics.GreenMean,
+            statistics.BlueMean,
+            statistics.RedNoise,
+            statistics.GreenNoise,
+            statistics.BlueNoise,
+            statistics.IsColor,
+            statistics.CenterX,
+            statistics.CenterY,
+            statistics.X,
+            statistics.Y,
+            statistics.Size);
     }
 
     private static Q13MeasurementResult MeasureStripGeometry(Mat image, string imagePath, int channels, Q13MeasurementOptions options)
@@ -206,7 +161,6 @@ public sealed class Q13Measurer
         using var transform = Cv2.GetPerspectiveTransform(geometry.SourcePoints(), destination);
         Cv2.WarpPerspective(image, warped, transform, new Size(stripWidth, stripHeight), InterpolationFlags.Linear, BorderTypes.Replicate);
 
-        var targets = Q13Target.KodakPatches;
         var regions = (options.SampleRegions ?? Q13StripGeometry.CreateDefaultSampleRegions(patchCount: options.PatchCount))
             .OrderBy(region => region.PatchIndex)
             .ToArray();
@@ -220,7 +174,14 @@ public sealed class Q13Measurer
             var rect = MeasurementGeometry.CenteredSquare(stripWidth, stripHeight, sampleSize, centerX, centerY);
             using var roi = new Mat(warped, rect);
             var originalCenter = geometry.PointAt(region.CenterX, region.CenterY);
-            patches.Add(MeasurePatch(roi, targets[region.PatchIndex], region.PatchIndex, channels, originalCenter.X, originalCenter.Y, rect) with
+            patches.Add(CreatePatchMeasurement(region.PatchIndex, PatchSampler.SampleRgb(roi, channels) with
+            {
+                CenterX = originalCenter.X,
+                CenterY = originalCenter.Y,
+                X = rect.X,
+                Y = rect.Y,
+                Size = rect.Width
+            }) with
             {
                 ReportSampleCenterX = (int)Math.Round(originalCenter.X),
                 ReportSampleCenterY = (int)Math.Round(originalCenter.Y),

@@ -38,7 +38,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Q13 placement failed.";
+            SetStatus("Q13 placement failed.");
             MessageBox.Show(this, ex.Message, "Placement failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -74,7 +74,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Q13 results CSV import failed.";
+            SetStatus("Q13 results CSV import failed.");
             MessageBox.Show(this, ex.Message, "Could not load Q13 results CSV", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -91,7 +91,7 @@ public partial class MainWindow
         Q13ClearPointsButton.IsEnabled = false;
         _acceptedQ13Geometry = null;
         _acceptedQ13Regions = null;
-        StatusText.Text = "Reselecting Q13 measurement area...";
+        SetStatus("Reselecting Q13 measurement area...");
         BeginQ13Placement(imagePath);
     }
 
@@ -223,11 +223,11 @@ public partial class MainWindow
         try
         {
             await _currentQ13Result.SaveCsvAsync(dialog.FileName);
-            StatusText.Text = $"Q13 CSV exported to {dialog.FileName}";
+            SetStatus($"Q13 CSV exported to {dialog.FileName}");
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Q13 CSV export failed.";
+            SetStatus("Q13 CSV export failed.");
             MessageBox.Show(this, ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -242,9 +242,9 @@ public partial class MainWindow
         Q13ExportButton.IsEnabled = true;
         Q13ClearPointsButton.IsEnabled = true;
         DrawQ13Overlay();
-        StatusText.Text = _q13SampleCenters is null
+        SetStatus(_q13SampleCenters is null
             ? "Q13 measurement complete using selected sample regions."
-            : "Q13 measurement complete using imported results CSV sample centers.";
+            : "Q13 measurement complete using imported results CSV sample centers.");
     }
 
     private void OpenQ13Image(string imagePath, bool autoLoadNeighborCsv)
@@ -272,7 +272,7 @@ public partial class MainWindow
             }
         }
 
-        StatusText.Text = "Detecting Q13 grayscale strip...";
+        SetStatus("Detecting Q13 grayscale strip...");
         BeginQ13Placement(imagePath);
     }
 
@@ -297,7 +297,7 @@ public partial class MainWindow
         Q13ResultsView.Visibility = Visibility.Visible;
         Q13PlacementEditor.Visibility = Visibility.Collapsed;
         ShowQ13Result(_currentQ13Result);
-        StatusText.Text = statusText;
+        SetStatus(statusText);
     }
 
     private void BeginQ13Placement(string imagePath)
@@ -350,7 +350,7 @@ public partial class MainWindow
 
         try
         {
-            StatusText.Text = "Measuring accepted Q13 placement...";
+            SetStatus("Measuring accepted Q13 placement...");
             _currentQ13Result = _q13Measurer.Measure(_pendingQ13ImagePath, new Q13MeasurementOptions
             {
                 StripGeometry = _pendingQ13Geometry,
@@ -365,7 +365,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Q13 measurement failed.";
+            SetStatus("Q13 measurement failed.");
             MessageBox.Show(this, ex.Message, "Measurement failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -379,7 +379,7 @@ public partial class MainWindow
         _pendingQ13Geometry = null;
         _pendingQ13Regions = [];
         _q13ManualPoints.Clear();
-        StatusText.Text = "Q13 placement cancelled.";
+        SetStatus("Q13 placement cancelled.");
     }
 
     private void DrawQ13Overlay()

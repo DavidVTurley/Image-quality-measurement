@@ -1,85 +1,97 @@
 using Imcheck.Measurement.Measurements.Q13;
+using Imcheck.Measurement;
 
 namespace Imcheck.Measurement.Tests;
 
 public sealed class Q13MeasurerTests
 {
-    private static readonly string ExampleImagesDirectory =
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "Downloads",
-            "imcheck4v2(2024)_dist",
-            "Example_images");
-
     [Fact]
-    public void KodakReferenceTiffMatchesImcheckOutput()
+    public void GeneratedQ13TiffMatchesGeneratedPatchValues()
     {
-        var path = ExampleImage("kodak_q13_eciRGBv2_300dpi.tif");
-        var expected = new[] { 244, 223, 203, 185, 169, 153, 139, 126, 113, 102, 91, 82, 73, 64, 56, 49, 43, 36, 31, 25 };
-
-        var result = new Q13Measurer().Measure(path);
-
-        Assert.Equal(20, result.Patches.Count);
-        Assert.Equal(1521, result.SampleDataSize);
-        Assert.Equal(2.47, result.InverseGamma, precision: 2);
-        Assert.All(result.Patches.Zip(expected), pair =>
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.tif");
+        try
         {
-            Assert.Equal(pair.Second, pair.First.Output);
-            Assert.Equal(0, pair.First.Noise);
-        });
-        Assert.Contains("244\t0", result.ToImcheckText());
-        Assert.Contains("Patch,Output,Noise,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight", result.ToCsv());
+            var generated = GenerateQ13(path);
+            var centers = Q13Centers(generated.Width, generated.Height);
+
+            var result = new Q13Measurer().Measure(path, new Q13MeasurementOptions { SampleCenters = centers, SampleSize = 9 });
+
+            Assert.Equal(20, result.Patches.Count);
+            Assert.Equal(81, result.SampleDataSize);
+            Assert.All(result.Patches.Zip(Q13GrayscaleTargetGenerator.Patches), pair =>
+            {
+                Assert.Equal(pair.Second.EncodedRgb, pair.First.Output);
+                Assert.Equal(0, pair.First.Noise);
+            });
+            Assert.True(double.IsFinite(result.InverseGamma));
+            Assert.Contains($"{Q13GrayscaleTargetGenerator.Patches[0].EncodedRgb}\t0", result.ToImcheckText());
+            Assert.Contains("Patch,Output,Noise,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight", result.ToCsv());
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     [Fact]
-    public void LightnessRampReferenceTiffMatchesImcheckOutput()
+    public void GeneratedQ13PngProducesTwentyColorRows()
     {
-        var path = ExampleImage("grayscale_eciRGBv2_L5-95_300dpi.tif");
-        var expected = new[] { 13, 26, 38, 51, 64, 77, 89, 102, 115, 128, 140, 153, 166, 179, 191, 204, 217, 230, 242, 255 };
-
-        var result = new Q13Measurer().Measure(path);
-
-        Assert.Equal(20, result.Patches.Count);
-        Assert.All(result.Patches.Zip(expected), pair =>
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        try
         {
-            Assert.Equal(pair.Second, pair.First.Output);
-            Assert.Equal(0, pair.First.Noise);
-        });
-    }
+            var generated = GenerateQ13(path);
+            var centers = Q13Centers(generated.Width, generated.Height);
 
-    [Fact]
-    public void RgbJpegProducesTwentyColorRows()
-    {
-        var path = ExampleImage("Q-13-1.jpg");
+            var result = new Q13Measurer().Measure(path, new Q13MeasurementOptions { SampleCenters = centers, SampleSize = 9 });
 
-        var result = new Q13Measurer().Measure(path, new Q13MeasurementOptions { SampleSize = 9 });
-
-        Assert.Equal(20, result.Patches.Count);
-        Assert.True(result.IsColor);
-        Assert.All(result.Patches, patch =>
+            Assert.Equal(20, result.Patches.Count);
+            Assert.True(result.IsColor);
+            Assert.All(result.Patches.Zip(Q13GrayscaleTargetGenerator.Patches), pair =>
+            {
+                Assert.Equal(pair.Second.EncodedRgb, pair.First.OutputRed);
+                Assert.Equal(pair.Second.EncodedRgb, pair.First.OutputGreen);
+                Assert.Equal(pair.Second.EncodedRgb, pair.First.OutputBlue);
+                Assert.Equal(0, pair.First.NoiseRed);
+                Assert.Equal(0, pair.First.NoiseGreen);
+                Assert.Equal(0, pair.First.NoiseBlue);
+            });
+        }
+        finally
         {
-            Assert.InRange(patch.OutputRed, 0, 255);
-            Assert.InRange(patch.OutputGreen, 0, 255);
-            Assert.InRange(patch.OutputBlue, 0, 255);
-            Assert.True(patch.NoiseRed >= 0);
-            Assert.True(patch.NoiseGreen >= 0);
-            Assert.True(patch.NoiseBlue >= 0);
-        });
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     [Fact]
     public void ExplicitSampleCentersCanReproduceStraightLineMeasurement()
     {
-        var path = ExampleImage("kodak_q13_eciRGBv2_300dpi.tif");
-        var centers = Q13Measurer.CreateStraightLineSampleCenters(width: 2398, height: 354);
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        try
+        {
+            var generated = GenerateQ13(path);
+            var centers = Q13Centers(generated.Width, generated.Height);
 
-        var result = new Q13Measurer().Measure(path, new Q13MeasurementOptions { SampleCenters = centers });
+            var result = new Q13Measurer().Measure(path, new Q13MeasurementOptions { SampleCenters = centers, SampleSize = 9 });
 
-        Assert.Equal(20, result.Patches.Count);
-        Assert.Equal(244, result.Patches[0].Output);
-        Assert.Equal(25, result.Patches[19].Output);
-        Assert.Equal(centers[0].X, result.Patches[0].SampleCenterX);
-        Assert.Equal(centers[0].Y, result.Patches[0].SampleCenterY);
+            Assert.Equal(20, result.Patches.Count);
+            Assert.Equal(Q13GrayscaleTargetGenerator.Patches[0].EncodedRgb, result.Patches[0].Output);
+            Assert.Equal(Q13GrayscaleTargetGenerator.Patches[19].EncodedRgb, result.Patches[19].Output);
+            Assert.Equal(centers[0].X, result.Patches[0].SampleCenterX);
+            Assert.Equal(centers[0].Y, result.Patches[0].SampleCenterY);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     [Fact]
@@ -115,10 +127,26 @@ public sealed class Q13MeasurerTests
         }
     }
 
-    private static string ExampleImage(string fileName)
+    private static Q13GrayscaleTargetGeneratorResult GenerateQ13(string path)
     {
-        var path = Path.Combine(ExampleImagesDirectory, fileName);
-        Assert.True(File.Exists(path), $"Expected reference image was not found: {path}");
-        return path;
+        return new Q13GrayscaleTargetGenerator().Generate(
+            path,
+            new Q13GrayscaleTargetGeneratorOptions
+            {
+                ShowLabels = false,
+                ShowMillimeterScale = false,
+                ShowTitle = false
+            });
+    }
+
+    private static IReadOnlyList<Q13SamplePoint> Q13Centers(int width, int height)
+    {
+        return Enumerable.Range(0, Q13GrayscaleTargetGenerator.Patches.Count)
+            .Select(index =>
+            {
+                var layout = Q13GrayscaleTargetGenerator.GetPatchLayout(index, width, height);
+                return new Q13SamplePoint(index, layout.CenterX, layout.CenterY);
+            })
+            .ToArray();
     }
 }

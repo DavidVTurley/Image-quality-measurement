@@ -103,17 +103,17 @@ public partial class MainWindow
             var dpi = ParsePositiveInt(GeneratorDpiTextBox.Text, "DPI");
             var outputPath = CreateGeneratorOutputPath(dpi);
 
-            StatusText.Text = $"Generating {CurrentGeneratorDisplayName()}...";
+            SetStatus($"Generating {CurrentGeneratorDisplayName()}...");
             var (width, height) = GenerateSelectedTarget(outputPath, dpi);
             GeneratorExportStatusText.Foreground = BrushFromRgb(109, 187, 138);
             GeneratorExportStatusText.Text = string.Create(CultureInfo.InvariantCulture, $"Generated {width}x{height} {OutputFormatName(outputPath)}.");
-            StatusText.Text = $"Generated {CurrentGeneratorDisplayName()}: {outputPath}";
+            SetStatus($"Generated {CurrentGeneratorDisplayName()}: {outputPath}");
         }
         catch (Exception ex)
         {
             GeneratorExportStatusText.Foreground = BrushFromRgb(224, 112, 112);
             GeneratorExportStatusText.Text = ex.Message;
-            StatusText.Text = "Target generation failed.";
+            SetStatus("Target generation failed.");
             MessageBox.Show(this, ex.Message, "Generation failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

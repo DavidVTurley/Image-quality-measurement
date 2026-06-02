@@ -2,7 +2,7 @@ using OpenCvSharp;
 
 namespace Imcheck.Measurement;
 
-public sealed class Q13GrayscaleTargetGenerator
+public sealed class Q13GrayscaleTargetGenerator : ITargetGenerator<Q13GrayscaleTargetGeneratorOptions, Q13GrayscaleTargetGeneratorResult>
 {
     public const int DefaultDpi = 600;
     public const double TargetWidthMillimeters = 203.0;
@@ -35,16 +35,12 @@ public sealed class Q13GrayscaleTargetGenerator
         options ??= new Q13GrayscaleTargetGeneratorOptions();
         ValidateOptions(options);
 
-        var width = PixelsForMillimeters(TargetWidthMillimeters, options.Dpi);
-        var height = PixelsForMillimeters(TargetHeightMillimeters, options.Dpi);
+        var width = TargetRendering.PixelsForMillimeters(TargetWidthMillimeters, options.Dpi);
+        var height = TargetRendering.PixelsForMillimeters(TargetHeightMillimeters, options.Dpi);
 
         using var image = Render(width, height, options);
 
-        var directory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        TargetRendering.EnsureOutputDirectory(outputPath);
 
         if (!GrayscaleTiffWriter.Write(outputPath, image))
         {
@@ -190,55 +186,44 @@ public sealed class Q13GrayscaleTargetGenerator
 
     private static Rect RectFromMillimeters(double x, double y, double width, double height, double scaleX, double scaleY)
     {
-        return new Rect(ScaleX(x, scaleX), ScaleY(y, scaleY), Math.Max(1, ScaleX(width, scaleX)), Math.Max(1, ScaleY(height, scaleY)));
+        return TargetRendering.Rect(x, y, width, height, scaleX, scaleY);
     }
 
     private static Point Point(double x, double y, double scaleX, double scaleY)
     {
-        return new Point(ScaleX(x, scaleX), ScaleY(y, scaleY));
+        return TargetRendering.Point(x, y, scaleX, scaleY);
     }
 
     private static void PutText(Mat image, string text, double x, double baselineY, double fontScale, int thickness, Scalar color, double scaleX, double scaleY)
     {
-        var scaledFont = fontScale * (scaleX + scaleY) / 2.0;
-        Cv2.PutText(image, text, Point(x, baselineY, scaleX, scaleY), HersheyFonts.HersheySimplex, scaledFont, color, Math.Max(1, thickness), LineTypes.AntiAlias);
+        TargetRendering.PutText(image, text, x, baselineY, fontScale, thickness, color, scaleX, scaleY);
     }
 
     private static void PutRightText(Mat image, string text, double rightX, double baselineY, double fontScale, int thickness, Scalar color, double scaleX, double scaleY)
     {
-        var scaledFont = fontScale * (scaleX + scaleY) / 2.0;
-        var scaledThickness = Math.Max(1, thickness);
-        var size = Cv2.GetTextSize(text, HersheyFonts.HersheySimplex, scaledFont, scaledThickness, out _);
-        var origin = Point(rightX, baselineY, scaleX, scaleY);
-        origin.X -= size.Width;
-        Cv2.PutText(image, text, origin, HersheyFonts.HersheySimplex, scaledFont, color, scaledThickness, LineTypes.AntiAlias);
+        TargetRendering.PutRightText(image, text, rightX, baselineY, fontScale, thickness, color, scaleX, scaleY);
     }
 
     private static void PutCenteredText(Mat image, string text, double centerX, double baselineY, double fontScale, int thickness, Scalar color, double scaleX, double scaleY)
     {
-        var scaledFont = fontScale * (scaleX + scaleY) / 2.0;
-        var scaledThickness = Math.Max(1, thickness);
-        var size = Cv2.GetTextSize(text, HersheyFonts.HersheySimplex, scaledFont, scaledThickness, out _);
-        var origin = Point(centerX, baselineY, scaleX, scaleY);
-        origin.X -= size.Width / 2;
-        Cv2.PutText(image, text, origin, HersheyFonts.HersheySimplex, scaledFont, color, scaledThickness, LineTypes.AntiAlias);
+        TargetRendering.PutCenteredText(image, text, centerX, baselineY, fontScale, thickness, color, scaleX, scaleY);
     }
 
     private static Scalar Color(byte red, byte green, byte blue)
     {
-        return new Scalar(blue, green, red);
+        return TargetRendering.Color(red, green, blue);
     }
 
     private static int PixelsForMillimeters(double millimeters, int dpi)
     {
-        return (int)Math.Round(millimeters / 25.4 * dpi);
+        return TargetRendering.PixelsForMillimeters(millimeters, dpi);
     }
 
-    private static int ScaleX(double value, double scaleX) => (int)Math.Round(value * scaleX);
+    private static int ScaleX(double value, double scaleX) => TargetRendering.ScaleX(value, scaleX);
 
-    private static int ScaleY(double value, double scaleY) => (int)Math.Round(value * scaleY);
+    private static int ScaleY(double value, double scaleY) => TargetRendering.ScaleY(value, scaleY);
 
-    private static int ScaleAverage(double value, double scaleX, double scaleY) => Math.Max(1, (int)Math.Round(value * (scaleX + scaleY) / 2.0));
+    private static int ScaleAverage(double value, double scaleX, double scaleY) => TargetRendering.ScaleAverage(value, scaleX, scaleY);
 
     private static void ValidateOptions(Q13GrayscaleTargetGeneratorOptions options)
     {

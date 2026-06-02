@@ -32,7 +32,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Uniformity measurement failed.";
+            SetStatus("Uniformity measurement failed.");
             MessageBox.Show(this, ex.Message, "Measurement failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -68,7 +68,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Uniformity results CSV import failed.";
+            SetStatus("Uniformity results CSV import failed.");
             MessageBox.Show(this, ex.Message, "Could not load uniformity results CSV", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -90,11 +90,11 @@ public partial class MainWindow
         try
         {
             await File.WriteAllTextAsync(dialog.FileName, _currentUniformityResult.ToCsv());
-            StatusText.Text = $"Uniformity CSV exported to {dialog.FileName}";
+            SetStatus($"Uniformity CSV exported to {dialog.FileName}");
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Uniformity CSV export failed.";
+            SetStatus("Uniformity CSV export failed.");
             MessageBox.Show(this, ex.Message, "Export failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -113,7 +113,7 @@ public partial class MainWindow
         UniformityDeltaEText.Text = result.MaxDeltaEab.ToString("0.####", CultureInfo.InvariantCulture);
         UniformityExportButton.IsEnabled = true;
         DrawUniformityOverlay();
-        StatusText.Text = "Uniformity measurement complete.";
+        SetStatus("Uniformity measurement complete.");
     }
 
     private void OpenUniformityImage(string imagePath, bool autoLoadNeighborCsv)
@@ -135,7 +135,7 @@ public partial class MainWindow
             }
         }
 
-        StatusText.Text = "Measuring uniformity image...";
+        SetStatus("Measuring uniformity image...");
         _currentUniformityResult = _uniformityAnalyzer.Analyze(imagePath);
         UniformityPreviewImage.Source = LoadBitmap(imagePath);
         UniformityFileNameText.Text = imagePath;
@@ -152,7 +152,7 @@ public partial class MainWindow
         UniformityPreviewImage.Source = LoadBitmap(imagePath);
         UniformityFileNameText.Text = imagePath;
         ShowUniformityResult(_currentUniformityResult);
-        StatusText.Text = statusText;
+        SetStatus(statusText);
     }
 
     private void DrawUniformityOverlay()

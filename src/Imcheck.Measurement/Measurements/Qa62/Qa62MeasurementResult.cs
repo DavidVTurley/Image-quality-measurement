@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Imcheck.Measurement.Measurements;
 
 namespace Imcheck.Measurement.Measurements.Qa62;
 
@@ -8,7 +9,7 @@ public sealed record Qa62MeasurementResult(
     double SamplingPixelsPerInch,
     IReadOnlyList<Qa62PatchMeasurement> Patches,
     Qa62SfrSummary SfrSummary,
-    IReadOnlyList<Qa62SfrCurvePoint> SfrCurve)
+    IReadOnlyList<Qa62SfrCurvePoint> SfrCurve) : IImageMeasurementResult
 {
     public string ImageName => Path.GetFileName(ImagePath);
 

@@ -1,4 +1,4 @@
-using System.Globalization;
+using Imcheck.Measurement.Measurements.Common;
 
 namespace Imcheck.Measurement.Measurements.Q13;
 
@@ -42,15 +42,15 @@ public static class Q13ResultSampleCsv
             throw new InvalidDataException("Q13 results CSV is missing the patch table header.");
         }
 
-        var headers = SplitCsvLine(headerLine);
-        var indexes = RequiredIndexes(headers,
+        var headers = CsvTable.SplitLine(headerLine);
+        var indexes = CsvTable.RequiredIndexes(headers,
         [
             "Patch",
             "SampleCenterX",
             "SampleCenterY",
             "SampleWidth",
             "SampleHeight"
-        ]);
+        ], "Q13 results CSV");
 
         var samples = new List<Q13ImportedSampleRow>();
         while (reader.ReadLine() is { } rawLine)
@@ -61,12 +61,12 @@ public static class Q13ResultSampleCsv
                 continue;
             }
 
-            var parts = SplitCsvLine(rawLine);
-            var patchIndex = ParseInt(parts, indexes["Patch"], lineNumber, "Patch");
-            var centerX = ParseInt(parts, indexes["SampleCenterX"], lineNumber, "SampleCenterX");
-            var centerY = ParseInt(parts, indexes["SampleCenterY"], lineNumber, "SampleCenterY");
-            var width = ParseInt(parts, indexes["SampleWidth"], lineNumber, "SampleWidth");
-            var height = ParseInt(parts, indexes["SampleHeight"], lineNumber, "SampleHeight");
+            var parts = CsvTable.SplitLine(rawLine);
+            var patchIndex = CsvTable.ParseInt(parts, indexes["Patch"], lineNumber, "Patch");
+            var centerX = CsvTable.ParseInt(parts, indexes["SampleCenterX"], lineNumber, "SampleCenterX");
+            var centerY = CsvTable.ParseInt(parts, indexes["SampleCenterY"], lineNumber, "SampleCenterY");
+            var width = CsvTable.ParseInt(parts, indexes["SampleWidth"], lineNumber, "SampleWidth");
+            var height = CsvTable.ParseInt(parts, indexes["SampleHeight"], lineNumber, "SampleHeight");
 
             samples.Add(new Q13ImportedSampleRow(patchIndex, centerX, centerY, width, height));
         }
@@ -94,48 +94,6 @@ public static class Q13ResultSampleCsv
         }
 
         return value % 2 == 0 ? value + 1 : value;
-    }
-
-    private static Dictionary<string, int> RequiredIndexes(IReadOnlyList<string> headers, IReadOnlyList<string> requiredHeaders)
-    {
-        var indexes = headers
-            .Select((header, index) => (Header: header.Trim(), Index: index))
-            .ToDictionary(item => item.Header, item => item.Index, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var requiredHeader in requiredHeaders)
-        {
-            if (!indexes.ContainsKey(requiredHeader))
-            {
-                throw new InvalidDataException($"Q13 results CSV is missing the '{requiredHeader}' column.");
-            }
-        }
-
-        return indexes;
-    }
-
-    private static int ParseInt(IReadOnlyList<string> parts, int index, int lineNumber, string column)
-    {
-        if (index >= parts.Count || !int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-        {
-            throw new InvalidDataException($"Line {lineNumber} has an invalid '{column}' value.");
-        }
-
-        return value;
-    }
-
-    private static double ParseDouble(IReadOnlyList<string> parts, int index, int lineNumber, string column)
-    {
-        if (index >= parts.Count || !double.TryParse(parts[index], NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-        {
-            throw new InvalidDataException($"Line {lineNumber} has an invalid '{column}' value.");
-        }
-
-        return value;
-    }
-
-    private static IReadOnlyList<string> SplitCsvLine(string line)
-    {
-        return line.Split(',').Select(part => part.Trim()).ToArray();
     }
 }
 

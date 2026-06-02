@@ -92,6 +92,34 @@ public sealed class ResultOutputTests
     }
 
     [Fact]
+    public void Q13PointCsvLoadsPlainAndPatchIndexedCoordinates()
+    {
+        var plainPath = Path.Combine(Path.GetTempPath(), $"q13-points-plain-{Guid.NewGuid():N}.csv");
+        var indexedPath = Path.Combine(Path.GetTempPath(), $"q13-points-indexed-{Guid.NewGuid():N}.csv");
+        try
+        {
+            File.WriteAllLines(
+                plainPath,
+                ["X,Y", .. Enumerable.Range(0, 20).Select(index => FormattableString.Invariant($"{index + 0.5},{index + 10.5}"))]);
+            File.WriteAllLines(
+                indexedPath,
+                ["Patch,X,Y", .. Enumerable.Range(0, 20).Select(index => FormattableString.Invariant($"{index},{index + 1.5},{index + 11.5}"))]);
+
+            var plain = Q13SamplePointCsv.Load(plainPath);
+            var indexed = Q13SamplePointCsv.Load(indexedPath);
+
+            Assert.Equal(20, plain.Count);
+            Assert.Equal(new Q13SamplePoint(0, 0.5, 10.5), plain[0]);
+            Assert.Equal(new Q13SamplePoint(19, 20.5, 30.5), indexed[19]);
+        }
+        finally
+        {
+            if (File.Exists(plainPath)) File.Delete(plainPath);
+            if (File.Exists(indexedPath)) File.Delete(indexedPath);
+        }
+    }
+
+    [Fact]
     public void Qa62CsvKeepsGeometryInFileAndWritesColorChannelsAsRgb()
     {
         var zero = new Qa62ChannelValues(0, 0, 0, 0);
@@ -150,6 +178,34 @@ Center,100,100,100,50,0,0,28,38,35,35
             Assert.Equal(28, samples[0].CenterX);
             Assert.Equal(38, samples[0].CenterY);
             Assert.Equal(35, samples[0].SampleSize);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void UniformityResultCsvLoadsQuotedSampleNames()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"uniformity-quoted-result-{Guid.NewGuid():N}.csv");
+        var csv = """
+Image,1200x800,8-bit
+Sample size,35x35
+Max delta L*,0,Not specified,Not specified
+Max delta Eab,0,2,Pass
+
+Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleCenterX,SampleCenterY,SampleWidth,SampleHeight
+"Center, quoted",100,100,100,50,0,0,28,38,35,35
+""";
+
+        File.WriteAllText(path, csv);
+        try
+        {
+            var samples = UniformityResultSampleCsv.LoadSamples(path);
+
+            Assert.Single(samples);
+            Assert.Equal("Center, quoted", samples[0].Name);
         }
         finally
         {

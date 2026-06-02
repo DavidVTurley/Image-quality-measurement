@@ -268,13 +268,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal">
-                <Button x:Name="Q13NavButton" Width="96" Height="34" Margin="0,0,8,0" Click="Q13NavButton_Click">Q13</Button>
-                <Button x:Name="UniformityNavButton" Width="112" Height="34" Click="UniformityNavButton_Click">Uniformity</Button>
+                <Button x:Name="Q13NavButton" Width="96" Height="34" Margin="0,0,8,0" Command="{Binding SelectQ13Command}">Q13</Button>
+                <Button x:Name="UniformityNavButton" Width="112" Height="34" Command="{Binding SelectUniformityCommand}">Uniformity</Button>
             </StackPanel>
-            <Button x:Name="GeneratorNavButton" Grid.Column="1" Width="112" Height="34" Click="GeneratorNavButton_Click">Generator</Button>
+            <Button x:Name="GeneratorNavButton" Grid.Column="1" Width="112" Height="34" Command="{Binding SelectGeneratorCommand}">Generator</Button>
         </Grid>
 
-        <TabControl x:Name="MainTabs" Grid.Row="1" Margin="12" SelectionChanged="MainTabs_SelectionChanged">
+        <TabControl x:Name="MainTabs" Grid.Row="1" Margin="12" SelectedIndex="{Binding SelectedTabIndex}" SelectionChanged="MainTabs_SelectionChanged">
             <TabControl.Resources>
                 <Style TargetType="TabItem">
                     <Setter Property="Visibility" Value="Collapsed" />
@@ -713,7 +713,7 @@
         </TabControl>
 
         <Border Grid.Row="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="0,1,0,0">
-            <TextBlock x:Name="StatusText" Margin="16,9" Foreground="{StaticResource MutedBrush}" Text="Ready" />
+            <TextBlock x:Name="StatusText" Margin="16,9" Foreground="{StaticResource MutedBrush}" Text="{Binding StatusText}" />
         </Border>
     </Grid>
 </Window>

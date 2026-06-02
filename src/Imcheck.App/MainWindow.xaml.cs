@@ -1,6 +1,7 @@
 using Imcheck.Measurement.Measurements.Q13;
 using Imcheck.Measurement.Measurements.Uniformity;
 using Imcheck.Measurement;
+using Imcheck.App.ViewModels;
 using Microsoft.Win32;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -16,6 +17,7 @@ namespace Imcheck.App;
 
 public partial class MainWindow : Window
 {
+    private readonly MainWindowViewModel _viewModel = new();
     private readonly Q13Measurer _q13Measurer = new();
     private readonly Q13GrayscaleDetector _q13Detector = new();
     private readonly UniformityAnalyzer _uniformityAnalyzer = new();
@@ -34,6 +36,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        DataContext = _viewModel;
         ConfigureQ13Columns();
         ConfigureUniformityColumns();
         InitializeGeneratorTab();
@@ -69,17 +72,17 @@ public partial class MainWindow : Window
 
     private void Q13NavButton_Click(object sender, RoutedEventArgs e)
     {
-        MainTabs.SelectedIndex = 0;
+        _viewModel.SelectedTabIndex = 0;
     }
 
     private void UniformityNavButton_Click(object sender, RoutedEventArgs e)
     {
-        MainTabs.SelectedIndex = 1;
+        _viewModel.SelectedTabIndex = 1;
     }
 
     private void GeneratorNavButton_Click(object sender, RoutedEventArgs e)
     {
-        MainTabs.SelectedIndex = 2;
+        _viewModel.SelectedTabIndex = 2;
     }
 
     private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -149,6 +152,11 @@ public partial class MainWindow : Window
         }
 
         return dialog;
+    }
+
+    private void SetStatus(string value)
+    {
+        _viewModel.StatusText = value;
     }
 
     private static (double DisplayedWidth, double DisplayedHeight, double OffsetX, double OffsetY)? ImageDisplayTransform(

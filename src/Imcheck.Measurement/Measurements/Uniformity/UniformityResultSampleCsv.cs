@@ -1,4 +1,4 @@
-using System.Globalization;
+using Imcheck.Measurement.Measurements.Common;
 
 namespace Imcheck.Measurement.Measurements.Uniformity;
 
@@ -25,15 +25,15 @@ public static class UniformityResultSampleCsv
             throw new InvalidDataException("Uniformity results CSV is missing the sample table header.");
         }
 
-        var headers = SplitCsvLine(headerLine);
-        var indexes = RequiredIndexes(headers,
+        var headers = CsvTable.SplitLine(headerLine);
+        var indexes = CsvTable.RequiredIndexes(headers,
         [
             "Name",
             "SampleCenterX",
             "SampleCenterY",
             "SampleWidth",
             "SampleHeight"
-        ]);
+        ], "Uniformity results CSV");
 
         var samples = new List<UniformitySampleLocation>();
         while (reader.ReadLine() is { } rawLine)
@@ -44,12 +44,12 @@ public static class UniformityResultSampleCsv
                 continue;
             }
 
-            var parts = SplitCsvLine(rawLine);
-            var name = ParseString(parts, indexes["Name"], lineNumber, "Name");
-            var centerX = ParseInt(parts, indexes["SampleCenterX"], lineNumber, "SampleCenterX");
-            var centerY = ParseInt(parts, indexes["SampleCenterY"], lineNumber, "SampleCenterY");
-            var width = ParseInt(parts, indexes["SampleWidth"], lineNumber, "SampleWidth");
-            var height = ParseInt(parts, indexes["SampleHeight"], lineNumber, "SampleHeight");
+            var parts = CsvTable.SplitLine(rawLine);
+            var name = CsvTable.ParseString(parts, indexes["Name"], lineNumber, "Name");
+            var centerX = CsvTable.ParseInt(parts, indexes["SampleCenterX"], lineNumber, "SampleCenterX");
+            var centerY = CsvTable.ParseInt(parts, indexes["SampleCenterY"], lineNumber, "SampleCenterY");
+            var width = CsvTable.ParseInt(parts, indexes["SampleWidth"], lineNumber, "SampleWidth");
+            var height = CsvTable.ParseInt(parts, indexes["SampleHeight"], lineNumber, "SampleHeight");
             var sampleSize = NormalizeSampleSize(Math.Min(width, height));
 
             samples.Add(new UniformitySampleLocation(name, centerX, centerY, sampleSize));
@@ -71,47 +71,5 @@ public static class UniformityResultSampleCsv
         }
 
         return value % 2 == 0 ? value + 1 : value;
-    }
-
-    private static Dictionary<string, int> RequiredIndexes(IReadOnlyList<string> headers, IReadOnlyList<string> requiredHeaders)
-    {
-        var indexes = headers
-            .Select((header, index) => (Header: header.Trim(), Index: index))
-            .ToDictionary(item => item.Header, item => item.Index, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var requiredHeader in requiredHeaders)
-        {
-            if (!indexes.ContainsKey(requiredHeader))
-            {
-                throw new InvalidDataException($"Uniformity results CSV is missing the '{requiredHeader}' column.");
-            }
-        }
-
-        return indexes;
-    }
-
-    private static string ParseString(IReadOnlyList<string> parts, int index, int lineNumber, string column)
-    {
-        if (index >= parts.Count || string.IsNullOrWhiteSpace(parts[index]))
-        {
-            throw new InvalidDataException($"Line {lineNumber} has an invalid '{column}' value.");
-        }
-
-        return parts[index].Trim();
-    }
-
-    private static int ParseInt(IReadOnlyList<string> parts, int index, int lineNumber, string column)
-    {
-        if (index >= parts.Count || !int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-        {
-            throw new InvalidDataException($"Line {lineNumber} has an invalid '{column}' value.");
-        }
-
-        return value;
-    }
-
-    private static IReadOnlyList<string> SplitCsvLine(string line)
-    {
-        return line.Split(',').Select(part => part.Trim()).ToArray();
     }
 }

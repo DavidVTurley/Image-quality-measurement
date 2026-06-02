@@ -2,7 +2,7 @@ using OpenCvSharp;
 
 namespace Imcheck.Measurement;
 
-public sealed class Qa62TargetGenerator
+public sealed class Qa62TargetGenerator : ITargetGenerator<Qa62TargetGeneratorOptions, Qa62TargetGeneratorResult>
 {
     public const int DefaultDpi = 600;
     public const double TargetWidthMillimeters = 76.2;
@@ -74,8 +74,8 @@ public sealed class Qa62TargetGenerator
         options ??= new Qa62TargetGeneratorOptions();
         ValidateOptions(options);
 
-        var width = PixelsForMillimeters(TargetWidthMillimeters, options.Dpi);
-        var height = PixelsForMillimeters(TargetHeightMillimeters, options.Dpi);
+        var width = TargetRendering.PixelsForMillimeters(TargetWidthMillimeters, options.Dpi);
+        var height = TargetRendering.PixelsForMillimeters(TargetHeightMillimeters, options.Dpi);
         var scaleX = width / 913.0;
         var scaleY = height / 1176.0;
 
@@ -87,11 +87,7 @@ public sealed class Qa62TargetGenerator
         DrawPatches(image, scaleX, scaleY);
         DrawBottomIdentification(image, scaleX, scaleY);
 
-        var directory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        TargetRendering.EnsureOutputDirectory(outputPath);
 
         if (!Cv2.ImWrite(outputPath, image))
         {
@@ -206,12 +202,7 @@ public sealed class Qa62TargetGenerator
         double scaleX,
         double scaleY)
     {
-        var scaledFont = fontScale * (scaleX + scaleY) / 2.0;
-        var scaledThickness = Math.Max(1, (int)Math.Round(thickness * (scaleX + scaleY) / 2.0));
-        var size = Cv2.GetTextSize(text, HersheyFonts.HersheySimplex, scaledFont, scaledThickness, out _);
-        var origin = Point(centerX, baselineY, scaleX, scaleY);
-        origin.X -= size.Width / 2;
-        Cv2.PutText(image, text, origin, HersheyFonts.HersheySimplex, scaledFont, color, scaledThickness, LineTypes.AntiAlias);
+        TargetRendering.PutScaledCenteredText(image, text, centerX, baselineY, fontScale, thickness, color, scaleX, scaleY);
     }
 
     private static void PutText(
@@ -225,48 +216,42 @@ public sealed class Qa62TargetGenerator
         double scaleX,
         double scaleY)
     {
-        var scaledFont = fontScale * (scaleX + scaleY) / 2.0;
-        var scaledThickness = Math.Max(1, (int)Math.Round(thickness * (scaleX + scaleY) / 2.0));
-        Cv2.PutText(image, text, Point(x, y, scaleX, scaleY), HersheyFonts.HersheySimplex, scaledFont, color, scaledThickness, LineTypes.AntiAlias);
+        TargetRendering.PutScaledText(image, text, x, y, fontScale, thickness, color, scaleX, scaleY);
     }
 
     private static Rect RectFromReference(double x, double y, double width, double height, double scaleX, double scaleY)
     {
-        return new Rect(
-            ScaleX(x, scaleX),
-            ScaleY(y, scaleY),
-            Math.Max(1, ScaleX(width, scaleX)),
-            Math.Max(1, ScaleY(height, scaleY)));
+        return TargetRendering.Rect(x, y, width, height, scaleX, scaleY);
     }
 
     private static Point Point(double x, double y, double scaleX, double scaleY)
     {
-        return new Point(ScaleX(x, scaleX), ScaleY(y, scaleY));
+        return TargetRendering.Point(x, y, scaleX, scaleY);
     }
 
     private static Scalar Color((byte Red, byte Green, byte Blue) color)
     {
-        return Color(color.Red, color.Green, color.Blue);
+        return TargetRendering.Color(color);
     }
 
     private static Scalar Color(byte red, byte green, byte blue)
     {
-        return new Scalar(blue, green, red);
+        return TargetRendering.Color(red, green, blue);
     }
 
     private static int PixelsForMillimeters(double millimeters, int dpi)
     {
-        return (int)Math.Round(millimeters / 25.4 * dpi);
+        return TargetRendering.PixelsForMillimeters(millimeters, dpi);
     }
 
     private static int ScaleX(double value, double scaleX)
     {
-        return (int)Math.Round(value * scaleX);
+        return TargetRendering.ScaleX(value, scaleX);
     }
 
     private static int ScaleY(double value, double scaleY)
     {
-        return (int)Math.Round(value * scaleY);
+        return TargetRendering.ScaleY(value, scaleY);
     }
 
     private static void ValidateOptions(Qa62TargetGeneratorOptions options)
