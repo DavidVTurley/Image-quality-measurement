@@ -2,9 +2,11 @@ using Imcheck.Measurement.Measurements.Q13;
 using Imcheck.Measurement.Measurements.Uniformity;
 using Imcheck.Measurement;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 
 namespace Imcheck.App;
@@ -32,6 +34,38 @@ public partial class MainWindow : Window
         ConfigureQ13Columns();
         ConfigureUniformityColumns();
         InitializeGeneratorTab();
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        ApplyDarkTitleBar();
+    }
+
+    private void ApplyDarkTitleBar()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var useDarkMode = 1;
+        _ = DwmSetWindowAttribute(handle, DwmWindowAttribute.UseImmersiveDarkMode, ref useDarkMode, Marshal.SizeOf<int>());
+
+        var captionColor = ColorRef(15, 15, 15);
+        _ = DwmSetWindowAttribute(handle, DwmWindowAttribute.CaptionColor, ref captionColor, Marshal.SizeOf<int>());
+
+        var textColor = ColorRef(232, 228, 220);
+        _ = DwmSetWindowAttribute(handle, DwmWindowAttribute.TextColor, ref textColor, Marshal.SizeOf<int>());
+
+        var borderColor = ColorRef(42, 42, 42);
+        _ = DwmSetWindowAttribute(handle, DwmWindowAttribute.BorderColor, ref borderColor, Marshal.SizeOf<int>());
+    }
+
+    private static int ColorRef(byte red, byte green, byte blue)
+    {
+        return red | (green << 8) | (blue << 16);
     }
 
     private static BitmapImage LoadBitmap(string path)
@@ -75,6 +109,17 @@ public partial class MainWindow : Window
         var fittedWidth = hostWidth;
         var fittedHeight = fittedWidth / imageAspect;
         return (fittedWidth, fittedHeight, 0, (hostHeight - fittedHeight) / 2.0);
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, DwmWindowAttribute attribute, ref int pvAttribute, int cbAttribute);
+
+    private enum DwmWindowAttribute
+    {
+        UseImmersiveDarkMode = 20,
+        BorderColor = 34,
+        CaptionColor = 35,
+        TextColor = 36
     }
 
     private void ConfigureQ13Columns()
