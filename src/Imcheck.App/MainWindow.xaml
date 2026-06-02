@@ -291,8 +291,8 @@
                         <DockPanel Margin="16,12">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                 <Button x:Name="Q13OpenButton" Width="112" Height="34" Margin="0,0,8,0" Click="Q13OpenButton_Click">Open Image</Button>
-                                <Button x:Name="Q13LoadPointsButton" Width="132" Height="34" Margin="0,0,8,0" Click="Q13LoadPointsButton_Click">Load Points CSV</Button>
-                                <Button x:Name="Q13ClearPointsButton" Width="112" Height="34" Margin="0,0,8,0" Click="Q13ClearPointsButton_Click" IsEnabled="False">Clear Points</Button>
+                                <Button x:Name="Q13OpenImageCsvButton" Width="142" Height="34" Margin="0,0,8,0" Click="Q13OpenImageCsvButton_Click">Open Image + CSV</Button>
+                                <Button x:Name="Q13ClearPointsButton" Width="122" Height="34" Margin="0,0,8,0" Click="Q13ClearPointsButton_Click" IsEnabled="False">Reselect Points</Button>
                                 <Button x:Name="Q13ExportButton" Width="112" Height="34" Click="Q13ExportButton_Click" IsEnabled="False">Export CSV</Button>
                             </StackPanel>
                             <StackPanel>
@@ -416,6 +416,7 @@
                         <DockPanel Margin="16,12">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                 <Button x:Name="UniformityOpenButton" Width="112" Height="34" Margin="0,0,8,0" Click="UniformityOpenButton_Click">Open Image</Button>
+                                <Button x:Name="UniformityOpenImageCsvButton" Width="142" Height="34" Margin="0,0,8,0" Click="UniformityOpenImageCsvButton_Click">Open Image + CSV</Button>
                                 <Button x:Name="UniformityExportButton" Width="112" Height="34" Click="UniformityExportButton_Click" IsEnabled="False">Export CSV</Button>
                             </StackPanel>
                             <StackPanel>

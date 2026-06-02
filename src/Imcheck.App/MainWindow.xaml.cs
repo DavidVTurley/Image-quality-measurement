@@ -1,6 +1,7 @@
 using Imcheck.Measurement.Measurements.Q13;
 using Imcheck.Measurement.Measurements.Uniformity;
 using Imcheck.Measurement;
+using Microsoft.Win32;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -9,6 +10,7 @@ using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using IOPath = System.IO.Path;
 
 namespace Imcheck.App;
 
@@ -129,6 +131,24 @@ public partial class MainWindow : Window
         bitmap.EndInit();
         bitmap.Freeze();
         return bitmap;
+    }
+
+    private static SaveFileDialog CreateCsvReportSaveDialog(string title, string imagePath)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = title,
+            Filter = "CSV files|*.csv|All files|*.*",
+            FileName = IOPath.ChangeExtension(IOPath.GetFileName(imagePath), ".csv")
+        };
+
+        var directory = IOPath.GetDirectoryName(imagePath);
+        if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
+        {
+            dialog.InitialDirectory = directory;
+        }
+
+        return dialog;
     }
 
     private static (double DisplayedWidth, double DisplayedHeight, double OffsetX, double OffsetY)? ImageDisplayTransform(

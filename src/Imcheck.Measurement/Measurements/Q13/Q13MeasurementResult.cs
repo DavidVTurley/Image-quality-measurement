@@ -24,6 +24,26 @@ public sealed record Q13MeasurementResult(
     {
         var builder = new StringBuilder();
 
+        builder.Append("Image,").AppendLine(ImageName);
+        builder.Append("Sampling,")
+            .Append(Format(SamplingPixelsPerInch, "0.0")).Append(',')
+            .Append(Format(SamplingPixelsPerInch / 25.4, "0.0")).AppendLine();
+        builder.Append("Sample N,").AppendLine(SampleDataSize.ToString(CultureInfo.InvariantCulture));
+        if (IsColor)
+        {
+            builder.Append("1/gamma r,g,b,")
+                .Append(Format(InverseGammaRed, "0.00")).Append(',')
+                .Append(Format(InverseGammaGreen, "0.00")).Append(',')
+                .Append(Format(InverseGammaBlue, "0.00")).AppendLine();
+        }
+        else
+        {
+            builder.Append("1/gamma,").AppendLine(Format(InverseGamma, "0.00"));
+        }
+
+        builder.Append("Patch count,").AppendLine(Patches.Count.ToString(CultureInfo.InvariantCulture));
+        builder.AppendLine();
+
         if (IsColor)
         {
             builder.AppendLine("Patch,OutputRed,OutputGreen,OutputBlue,NoiseRed,NoiseGreen,NoiseBlue,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
@@ -36,14 +56,14 @@ public sealed record Q13MeasurementResult(
                     .Append(Format(patch.NoiseRed)).Append(',')
                     .Append(Format(patch.NoiseGreen)).Append(',')
                     .Append(Format(patch.NoiseBlue)).Append(',')
-                    .Append(patch.SampleTopLeftX).Append(',')
-                    .Append(patch.SampleTopLeftY).Append(',')
-                    .Append(patch.SampleTopRightX).Append(',')
-                    .Append(patch.SampleTopRightY).Append(',')
-                    .Append(patch.SampleBottomRightX).Append(',')
-                    .Append(patch.SampleBottomRightY).Append(',')
-                    .Append(patch.SampleBottomLeftX).Append(',')
-                    .Append(patch.SampleBottomLeftY).AppendLine();
+                    .Append(Format(patch.SampleTopLeftX)).Append(',')
+                    .Append(Format(patch.SampleTopLeftY)).Append(',')
+                    .Append(Format(patch.SampleTopRightX)).Append(',')
+                    .Append(Format(patch.SampleTopRightY)).Append(',')
+                    .Append(Format(patch.SampleBottomRightX)).Append(',')
+                    .Append(Format(patch.SampleBottomRightY)).Append(',')
+                    .Append(Format(patch.SampleBottomLeftX)).Append(',')
+                    .Append(Format(patch.SampleBottomLeftY)).AppendLine();
             }
 
             return builder.ToString();
@@ -55,14 +75,14 @@ public sealed record Q13MeasurementResult(
             builder.Append(patch.Index).Append(',')
                 .Append(Format(patch.Output)).Append(',')
                 .Append(Format(patch.Noise)).Append(',')
-                .Append(patch.SampleTopLeftX).Append(',')
-                .Append(patch.SampleTopLeftY).Append(',')
-                .Append(patch.SampleTopRightX).Append(',')
-                .Append(patch.SampleTopRightY).Append(',')
-                .Append(patch.SampleBottomRightX).Append(',')
-                .Append(patch.SampleBottomRightY).Append(',')
-                .Append(patch.SampleBottomLeftX).Append(',')
-                .Append(patch.SampleBottomLeftY).AppendLine();
+                .Append(Format(patch.SampleTopLeftX)).Append(',')
+                .Append(Format(patch.SampleTopLeftY)).Append(',')
+                .Append(Format(patch.SampleTopRightX)).Append(',')
+                .Append(Format(patch.SampleTopRightY)).Append(',')
+                .Append(Format(patch.SampleBottomRightX)).Append(',')
+                .Append(Format(patch.SampleBottomRightY)).Append(',')
+                .Append(Format(patch.SampleBottomLeftX)).Append(',')
+                .Append(Format(patch.SampleBottomLeftY)).AppendLine();
         }
 
         return builder.ToString();

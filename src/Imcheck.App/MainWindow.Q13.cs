@@ -1,6 +1,7 @@
 using Imcheck.Measurement.Measurements.Q13;
 using Microsoft.Win32;
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -33,11 +34,7 @@ public partial class MainWindow
 
         try
         {
-            StatusText.Text = "Detecting Q13 grayscale strip...";
-            Q13FileNameText.Text = dialog.FileName;
-            _acceptedQ13Geometry = null;
-            _acceptedQ13Regions = null;
-            BeginQ13Placement(dialog.FileName);
+            OpenQ13Image(dialog.FileName, autoLoadNeighborCsv: true);
         }
         catch (Exception ex)
         {
@@ -46,52 +43,56 @@ public partial class MainWindow
         }
     }
 
-    private void Q13LoadPointsButton_Click(object sender, RoutedEventArgs e)
+    private void Q13OpenImageCsvButton_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog
+        var imageDialog = new OpenFileDialog
         {
-            Title = "Open sample point CSV",
-            Filter = "CSV or text files|*.csv;*.txt|All files|*.*"
+            Title = "Open Q-13 image",
+            Filter = "Image files|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.bmp|All files|*.*"
         };
 
-        if (dialog.ShowDialog(this) != true)
+        if (imageDialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        var csvDialog = new OpenFileDialog
+        {
+            Title = "Open Q-13 results CSV",
+            Filter = "CSV files|*.csv|All files|*.*",
+            InitialDirectory = IOPath.GetDirectoryName(imageDialog.FileName)
+        };
+
+        if (csvDialog.ShowDialog(this) != true)
         {
             return;
         }
 
         try
         {
-            _q13SampleCenters = Q13SamplePointCsv.Load(dialog.FileName);
-            Q13ClearPointsButton.IsEnabled = true;
-            StatusText.Text = $"Loaded {_q13SampleCenters.Count} explicit Q13 sample centers.";
-
-            if (_currentQ13Result is not null)
-            {
-                _acceptedQ13Geometry = null;
-                _acceptedQ13Regions = null;
-                _currentQ13Result = _q13Measurer.Measure(_currentQ13Result.ImagePath, new Q13MeasurementOptions { SampleCenters = _q13SampleCenters });
-                ShowQ13Result(_currentQ13Result);
-            }
+            MeasureQ13FromResultsCsv(imageDialog.FileName, csvDialog.FileName, "Imported Q13 image and results CSV.");
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Could not load sample points", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusText.Text = "Q13 results CSV import failed.";
+            MessageBox.Show(this, ex.Message, "Could not load Q13 results CSV", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     private void Q13ClearPointsButton_Click(object sender, RoutedEventArgs e)
     {
+        var imagePath = _currentQ13Result?.ImagePath ?? _pendingQ13ImagePath;
+        if (string.IsNullOrWhiteSpace(imagePath))
+        {
+            return;
+        }
+
         _q13SampleCenters = null;
         Q13ClearPointsButton.IsEnabled = false;
-        StatusText.Text = "Using automatic Q13 straight-line sample centers.";
-
-        if (_currentQ13Result is not null)
-        {
-            _acceptedQ13Geometry = null;
-            _acceptedQ13Regions = null;
-            _currentQ13Result = _q13Measurer.Measure(_currentQ13Result.ImagePath);
-            ShowQ13Result(_currentQ13Result);
-        }
+        _acceptedQ13Geometry = null;
+        _acceptedQ13Regions = null;
+        StatusText.Text = "Reselecting Q13 measurement area...";
+        BeginQ13Placement(imagePath);
     }
 
     private void Q13PreviewHost_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -212,12 +213,7 @@ public partial class MainWindow
             return;
         }
 
-        var dialog = new SaveFileDialog
-        {
-            Title = "Export Q13 CSV",
-            Filter = "CSV files|*.csv|All files|*.*",
-            FileName = IOPath.ChangeExtension(_currentQ13Result.ImageName, ".csv")
-        };
+        var dialog = CreateCsvReportSaveDialog("Export Q13 CSV", _currentQ13Result.ImagePath);
 
         if (dialog.ShowDialog(this) != true)
         {
@@ -244,10 +240,59 @@ public partial class MainWindow
         Q13GammaText.Text = result.InverseGamma.ToString("0.00", CultureInfo.InvariantCulture);
         Q13PatchCountText.Text = result.Patches.Count.ToString(CultureInfo.InvariantCulture);
         Q13ExportButton.IsEnabled = true;
+        Q13ClearPointsButton.IsEnabled = true;
         DrawQ13Overlay();
         StatusText.Text = _q13SampleCenters is null
-            ? "Q13 measurement complete using automatic straight-line centers."
-            : "Q13 measurement complete using explicit sample centers.";
+            ? "Q13 measurement complete using selected sample regions."
+            : "Q13 measurement complete using imported results CSV sample centers.";
+    }
+
+    private void OpenQ13Image(string imagePath, bool autoLoadNeighborCsv)
+    {
+        Q13FileNameText.Text = imagePath;
+        _acceptedQ13Geometry = null;
+        _acceptedQ13Regions = null;
+        _q13SampleCenters = null;
+        Q13ClearPointsButton.IsEnabled = false;
+
+        if (autoLoadNeighborCsv)
+        {
+            var resultCsvPath = IOPath.ChangeExtension(imagePath, ".csv");
+            if (File.Exists(resultCsvPath))
+            {
+                try
+                {
+                    MeasureQ13FromResultsCsv(imagePath, resultCsvPath, $"Loaded neighboring Q13 results CSV: {resultCsvPath}");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, "Neighboring Q13 CSV could not be loaded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        StatusText.Text = "Detecting Q13 grayscale strip...";
+        BeginQ13Placement(imagePath);
+    }
+
+    private void MeasureQ13FromResultsCsv(string imagePath, string csvPath, string statusText)
+    {
+        _q13SampleCenters = Q13ResultSampleCsv.LoadSampleCenters(csvPath);
+        _acceptedQ13Geometry = null;
+        _acceptedQ13Regions = null;
+        _pendingQ13ImagePath = null;
+        _pendingQ13Geometry = null;
+        _pendingQ13Regions = [];
+        _q13ManualPoints.Clear();
+
+        _currentQ13Result = _q13Measurer.Measure(imagePath, new Q13MeasurementOptions { SampleCenters = _q13SampleCenters });
+        Q13FileNameText.Text = imagePath;
+        Q13PreviewImage.Source = LoadBitmap(imagePath);
+        Q13ResultsView.Visibility = Visibility.Visible;
+        Q13PlacementEditor.Visibility = Visibility.Collapsed;
+        ShowQ13Result(_currentQ13Result);
+        StatusText.Text = statusText;
     }
 
     private void BeginQ13Placement(string imagePath)
@@ -259,6 +304,8 @@ public partial class MainWindow
         Q13PlacementEditor.Visibility = Visibility.Visible;
         Q13PlacementImage.Source = LoadBitmap(imagePath);
         Q13AcceptPlacementButton.IsEnabled = false;
+        Q13ExportButton.IsEnabled = false;
+        Q13ClearPointsButton.IsEnabled = false;
 
         var detection = _q13Detector.Detect(imagePath);
         if (detection.Found && detection.Geometry is not null)
@@ -366,21 +413,23 @@ public partial class MainWindow
             return;
         }
 
-        var (displayedWidth, displayedHeight, offsetX, offsetY) = transform.Value;
         foreach (var patch in _currentQ13Result.Patches)
         {
-            var rectangle = new Rectangle
+            var polygon = new Polygon
             {
-                Width = patch.SampleSize / (double)bitmap.PixelWidth * displayedWidth,
-                Height = patch.SampleSize / (double)bitmap.PixelHeight * displayedHeight,
                 Stroke = Brushes.Red,
                 StrokeThickness = 2,
-                Fill = Brushes.Transparent
+                Fill = Brushes.Transparent,
+                Points = new PointCollection(
+                [
+                    ImageToQ13PreviewDisplayPoint(new Q13Point(patch.SampleTopLeftX, patch.SampleTopLeftY), bitmap, transform.Value),
+                    ImageToQ13PreviewDisplayPoint(new Q13Point(patch.SampleTopRightX, patch.SampleTopRightY), bitmap, transform.Value),
+                    ImageToQ13PreviewDisplayPoint(new Q13Point(patch.SampleBottomRightX, patch.SampleBottomRightY), bitmap, transform.Value),
+                    ImageToQ13PreviewDisplayPoint(new Q13Point(patch.SampleBottomLeftX, patch.SampleBottomLeftY), bitmap, transform.Value)
+                ])
             };
 
-            Canvas.SetLeft(rectangle, offsetX + patch.SampleX / (double)bitmap.PixelWidth * displayedWidth);
-            Canvas.SetTop(rectangle, offsetY + patch.SampleY / (double)bitmap.PixelHeight * displayedHeight);
-            Q13OverlayCanvas.Children.Add(rectangle);
+            Q13OverlayCanvas.Children.Add(polygon);
         }
     }
 

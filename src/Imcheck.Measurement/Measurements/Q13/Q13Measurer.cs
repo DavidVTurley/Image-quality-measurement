@@ -204,6 +204,7 @@ public sealed class Q13Measurer
         };
 
         using var transform = Cv2.GetPerspectiveTransform(geometry.SourcePoints(), destination);
+        using var inverseTransform = Cv2.GetPerspectiveTransform(destination, geometry.SourcePoints());
         Cv2.WarpPerspective(image, warped, transform, new Size(stripWidth, stripHeight), InterpolationFlags.Linear, BorderTypes.Replicate);
 
         var targets = Q13Target.KodakPatches;
@@ -219,7 +220,22 @@ public sealed class Q13Measurer
             var centerY = region.CenterY * stripHeight;
             var rect = MeasurementGeometry.CenteredSquare(stripWidth, stripHeight, sampleSize, centerX, centerY);
             using var roi = new Mat(warped, rect);
-            patches.Add(MeasurePatch(roi, targets[region.PatchIndex], region.PatchIndex, channels, centerX, centerY, rect));
+            var topLeft = TransformPoint(inverseTransform, rect.X, rect.Y);
+            var topRight = TransformPoint(inverseTransform, rect.X + rect.Width, rect.Y);
+            var bottomRight = TransformPoint(inverseTransform, rect.X + rect.Width, rect.Y + rect.Height);
+            var bottomLeft = TransformPoint(inverseTransform, rect.X, rect.Y + rect.Height);
+            var originalCenter = TransformPoint(inverseTransform, centerX, centerY);
+            patches.Add(MeasurePatch(roi, targets[region.PatchIndex], region.PatchIndex, channels, originalCenter.X, originalCenter.Y, rect) with
+            {
+                ReportSampleTopLeftX = topLeft.X,
+                ReportSampleTopLeftY = topLeft.Y,
+                ReportSampleTopRightX = topRight.X,
+                ReportSampleTopRightY = topRight.Y,
+                ReportSampleBottomRightX = bottomRight.X,
+                ReportSampleBottomRightY = bottomRight.Y,
+                ReportSampleBottomLeftX = bottomLeft.X,
+                ReportSampleBottomLeftY = bottomLeft.Y
+            });
         }
 
         return new Q13MeasurementResult(
@@ -230,6 +246,14 @@ public sealed class Q13Measurer
             CalculateInverseGamma(patches, channel: 1),
             CalculateInverseGamma(patches, channel: 2),
             patches);
+    }
+
+    private static Q13Point TransformPoint(Mat transform, double x, double y)
+    {
+        var scale = transform.At<double>(2, 0) * x + transform.At<double>(2, 1) * y + transform.At<double>(2, 2);
+        return new Q13Point(
+            (transform.At<double>(0, 0) * x + transform.At<double>(0, 1) * y + transform.At<double>(0, 2)) / scale,
+            (transform.At<double>(1, 0) * x + transform.At<double>(1, 1) * y + transform.At<double>(1, 2)) / scale);
     }
 
     private static double CalculateInverseGamma(IReadOnlyList<PatchMeasurement> patches, int channel)

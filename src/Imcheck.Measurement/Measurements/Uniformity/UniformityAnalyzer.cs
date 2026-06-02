@@ -46,9 +46,13 @@ public sealed class UniformityAnalyzer
         }
 
         var sampleSize = ResolveSampleSize(image.Width, image.Height, options);
-        var samples = DefaultSamplePoints
-            .Select(point => MeasurePoint(image, point, sampleSize, options))
-            .ToArray();
+        var samples = options.Samples is null
+            ? DefaultSamplePoints
+                .Select(point => MeasurePoint(image, point, sampleSize, options))
+                .ToArray()
+            : options.Samples
+                .Select(sample => MeasurePoint(image, sample, options))
+                .ToArray();
 
         var maxDeltaL = 0.0;
         var maxDeltaEab = 0.0;
@@ -72,7 +76,7 @@ public sealed class UniformityAnalyzer
             options.ColorSpace,
             options.QualityLevel,
             options.ImagePlaneSize,
-            sampleSize,
+            samples[0].SampleSize,
             samples,
             maxDeltaL,
             maxDeltaEab,
@@ -125,6 +129,47 @@ public sealed class UniformityAnalyzer
             lab.B);
     }
 
+    private static WhiteSheetSampleMeasurement MeasurePoint(Mat image, UniformitySampleLocation sample, UniformityAnalysisOptions options)
+    {
+        var rect = MeasurementGeometry.CenteredSquare(image.Width, image.Height, sample.SampleSize, sample.CenterX, sample.CenterY);
+        using var roi = new Mat(image, rect);
+
+        var pixels = rect.Width * rect.Height;
+        var redSum = 0.0;
+        var greenSum = 0.0;
+        var blueSum = 0.0;
+
+        for (var y = 0; y < roi.Height; y++)
+        {
+            for (var x = 0; x < roi.Width; x++)
+            {
+                var (red, green, blue) = ReadRgb(roi, x, y);
+                redSum += red;
+                greenSum += green;
+                blueSum += blue;
+            }
+        }
+
+        var redMean = redSum / pixels;
+        var greenMean = greenSum / pixels;
+        var blueMean = blueSum / pixels;
+        var lab = ColorConversions.ToLab(redMean, greenMean, blueMean, options.ColorSpace, image.Depth() == MatType.CV_16U ? 65535.0 : 255.0);
+
+        return new WhiteSheetSampleMeasurement(
+            sample.Name,
+            sample.CenterX,
+            sample.CenterY,
+            rect.X,
+            rect.Y,
+            rect.Width,
+            redMean,
+            greenMean,
+            blueMean,
+            lab.L,
+            lab.A,
+            lab.B);
+    }
+
     private static (double Red, double Green, double Blue) ReadRgb(Mat image, int x, int y)
     {
         if (image.Depth() == MatType.CV_8U)
@@ -160,12 +205,37 @@ public sealed class UniformityAnalyzer
     {
         if (options.SampleSize is null)
         {
+            if (options.Samples is null)
+            {
+                return;
+            }
+        }
+        else if (options.SampleSize < MinimumSampleSize || options.SampleSize % 2 == 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options.SampleSize), $"Sample size must be an odd number of at least {MinimumSampleSize} pixels.");
+        }
+
+        if (options.Samples is null)
+        {
             return;
         }
 
-        if (options.SampleSize < MinimumSampleSize || options.SampleSize % 2 == 0)
+        if (options.Samples.Count == 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.SampleSize), $"Sample size must be an odd number of at least {MinimumSampleSize} pixels.");
+            throw new ArgumentOutOfRangeException(nameof(options.Samples), "Explicit uniformity samples must include at least one sample.");
+        }
+
+        foreach (var sample in options.Samples)
+        {
+            if (string.IsNullOrWhiteSpace(sample.Name))
+            {
+                throw new ArgumentOutOfRangeException(nameof(options.Samples), "Explicit uniformity samples must have names.");
+            }
+
+            if (sample.SampleSize < MinimumSampleSize || sample.SampleSize % 2 == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options.Samples), $"Explicit uniformity sample size must be an odd number of at least {MinimumSampleSize} pixels.");
+            }
         }
     }
 
@@ -203,12 +273,16 @@ public sealed record UniformityAnalysisOptions
 {
     public int? SampleSize { get; init; }
 
+    public IReadOnlyList<UniformitySampleLocation>? Samples { get; init; }
+
     public RgbColorSpace ColorSpace { get; init; } = RgbColorSpace.SRgb;
 
     public UniformityQualityLevel QualityLevel { get; init; } = UniformityQualityLevel.Full;
 
     public UniformityImagePlaneSize ImagePlaneSize { get; init; } = UniformityImagePlaneSize.UpToA3;
 }
+
+public sealed record UniformitySampleLocation(string Name, double CenterX, double CenterY, int SampleSize);
 
 public sealed record UniformityAnalysisResult(
     string ImagePath,
@@ -234,9 +308,19 @@ public sealed record UniformityAnalysisResult(
     public string ToCsv()
     {
         var builder = new StringBuilder();
-        builder.AppendLine("Section,Metric,Value,Tolerance,Pass");
-        AppendSummary(builder, "Illumination", "MaxDeltaLStar", MaxDeltaLStar, IlluminationDeltaLStarTolerance, IlluminationPass);
-        AppendSummary(builder, "WhiteBalance", "MaxDeltaEab", MaxDeltaEab, WhiteBalanceDeltaEabTolerance, WhiteBalancePass);
+        builder.Append("Image,")
+            .Append(ImageWidth.ToString(CultureInfo.InvariantCulture))
+            .Append('x')
+            .Append(ImageHeight.ToString(CultureInfo.InvariantCulture))
+            .Append(',')
+            .Append(BitDepth.ToString(CultureInfo.InvariantCulture))
+            .AppendLine("-bit");
+        builder.Append("Sample size,")
+            .Append(SampleSize.ToString(CultureInfo.InvariantCulture))
+            .Append('x')
+            .AppendLine(SampleSize.ToString(CultureInfo.InvariantCulture));
+        AppendSummary(builder, "Max delta L*", MaxDeltaLStar, IlluminationDeltaLStarTolerance, IlluminationPass);
+        AppendSummary(builder, "Max delta Eab", MaxDeltaEab, WhiteBalanceDeltaEabTolerance, WhiteBalancePass);
         builder.AppendLine();
         builder.AppendLine("Name,MeanRed,MeanGreen,MeanBlue,LStar,AStar,BStar,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY");
         foreach (var sample in Samples)
@@ -261,10 +345,9 @@ public sealed record UniformityAnalysisResult(
         return builder.ToString();
     }
 
-    private static void AppendSummary(StringBuilder builder, string section, string metric, double value, double? tolerance, bool? pass)
+    private static void AppendSummary(StringBuilder builder, string label, double value, double? tolerance, bool? pass)
     {
-        builder.Append(section).Append(',')
-            .Append(metric).Append(',')
+        builder.Append(label).Append(',')
             .Append(Format(value)).Append(',')
             .Append(tolerance is null ? "Not specified" : Format(tolerance.Value)).Append(',')
             .Append(pass is null ? "Not specified" : pass.Value ? "Pass" : "Fail").AppendLine();

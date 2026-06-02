@@ -83,21 +83,30 @@ public sealed class Q13MeasurerTests
     }
 
     [Fact]
-    public void SamplePointCsvLoadsExplicitPatchCoordinates()
+    public void ResultCsvLoadsExplicitPatchCoordinates()
     {
         var path = Path.GetTempFileName();
         try
         {
-            var lines = new[] { "Patch,X,Y" }
-                .Concat(Enumerable.Range(0, 20).Select(i => FormattableString.Invariant($"{i},{i + 0.25},{100 + i + 0.5}")));
+            var lines = new[]
+            {
+                "Image,q13.tif",
+                "Sampling,300.0,11.8",
+                "Sample N,25",
+                "1/gamma,1.00",
+                "Patch count,20",
+                "",
+                "Patch,Output,Noise,SampleTopLeftX,SampleTopLeftY,SampleTopRightX,SampleTopRightY,SampleBottomRightX,SampleBottomRightY,SampleBottomLeftX,SampleBottomLeftY"
+            }
+                .Concat(Enumerable.Range(0, 20).Select(i => FormattableString.Invariant($"{i},100,1,{i},100,{i + 2},100,{i + 2},104,{i},104")));
             File.WriteAllLines(path, lines);
 
-            var points = Q13SamplePointCsv.Load(path);
+            var points = Q13ResultSampleCsv.LoadSampleCenters(path);
 
             Assert.Equal(20, points.Count);
             Assert.Equal(0, points[0].PatchIndex);
-            Assert.Equal(0.25, points[0].X);
-            Assert.Equal(100.5, points[0].Y);
+            Assert.Equal(1, points[0].X);
+            Assert.Equal(102, points[0].Y);
             Assert.Equal(19, points[19].PatchIndex);
         }
         finally

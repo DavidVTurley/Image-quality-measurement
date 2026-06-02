@@ -13,25 +13,33 @@ public sealed record PatchMeasurement(
     double SampleCenterY,
     int SampleX,
     int SampleY,
-    int SampleSize)
+    int SampleSize,
+    double? ReportSampleTopLeftX = null,
+    double? ReportSampleTopLeftY = null,
+    double? ReportSampleTopRightX = null,
+    double? ReportSampleTopRightY = null,
+    double? ReportSampleBottomRightX = null,
+    double? ReportSampleBottomRightY = null,
+    double? ReportSampleBottomLeftX = null,
+    double? ReportSampleBottomLeftY = null)
 {
     public double Output => OutputGreen;
 
     public double Noise => NoiseGreen;
 
-    public int SampleTopLeftX => SampleX;
+    public double SampleTopLeftX => ReportSampleTopLeftX ?? SampleX;
 
-    public int SampleTopLeftY => SampleY;
+    public double SampleTopLeftY => ReportSampleTopLeftY ?? SampleY;
 
-    public int SampleTopRightX => SampleX + SampleSize;
+    public double SampleTopRightX => ReportSampleTopRightX ?? SampleX + SampleSize;
 
-    public int SampleTopRightY => SampleY;
+    public double SampleTopRightY => ReportSampleTopRightY ?? SampleY;
 
-    public int SampleBottomRightX => SampleX + SampleSize;
+    public double SampleBottomRightX => ReportSampleBottomRightX ?? SampleX + SampleSize;
 
-    public int SampleBottomRightY => SampleY + SampleSize;
+    public double SampleBottomRightY => ReportSampleBottomRightY ?? SampleY + SampleSize;
 
-    public int SampleBottomLeftX => SampleX;
+    public double SampleBottomLeftX => ReportSampleBottomLeftX ?? SampleX;
 
-    public int SampleBottomLeftY => SampleY + SampleSize;
+    public double SampleBottomLeftY => ReportSampleBottomLeftY ?? SampleY + SampleSize;
 }

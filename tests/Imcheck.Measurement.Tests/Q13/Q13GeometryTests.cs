@@ -72,6 +72,38 @@ public sealed class Q13GeometryTests
     }
 
     [Fact]
+    public void StripGeometryCsvExportsOriginalImageSampleCoordinates()
+    {
+        using var image = CreateRotatedQ13Image(out var geometry, out _);
+        var imagePath = WriteTempImage(image);
+        var csvPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.csv");
+        try
+        {
+            var result = new Q13Measurer().Measure(imagePath, new Q13MeasurementOptions
+            {
+                StripGeometry = geometry,
+                SampleRegions = Q13StripGeometry.CreateDefaultSampleRegions(normalizedSampleSize: 0.18)
+            });
+            File.WriteAllText(csvPath, result.ToCsv());
+
+            var importedCenters = Q13ResultSampleCsv.LoadSampleCenters(csvPath);
+
+            Assert.Equal(20, importedCenters.Count);
+            var firstExpected = geometry.PointAt(0.025, 0.5);
+            Assert.InRange(importedCenters[0].X, firstExpected.X - 0.75, firstExpected.X + 0.75);
+            Assert.InRange(importedCenters[0].Y, firstExpected.Y - 0.75, firstExpected.Y + 0.75);
+            var lastExpected = geometry.PointAt(0.975, 0.5);
+            Assert.InRange(importedCenters[19].X, lastExpected.X - 0.75, lastExpected.X + 0.75);
+            Assert.InRange(importedCenters[19].Y, lastExpected.Y - 0.75, lastExpected.Y + 0.75);
+        }
+        finally
+        {
+            File.Delete(imagePath);
+            File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
     public void DetectorFindsRotatedSyntheticTargetInLargerImage()
     {
         using var image = CreateRotatedQ13Image(out _, out _);

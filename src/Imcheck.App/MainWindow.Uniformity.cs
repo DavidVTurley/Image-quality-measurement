@@ -28,16 +28,48 @@ public partial class MainWindow
 
         try
         {
-            StatusText.Text = "Measuring uniformity image...";
-            _currentUniformityResult = _uniformityAnalyzer.Analyze(dialog.FileName);
-            UniformityPreviewImage.Source = LoadBitmap(dialog.FileName);
-            UniformityFileNameText.Text = dialog.FileName;
-            ShowUniformityResult(_currentUniformityResult);
+            OpenUniformityImage(dialog.FileName, autoLoadNeighborCsv: true);
         }
         catch (Exception ex)
         {
             StatusText.Text = "Uniformity measurement failed.";
             MessageBox.Show(this, ex.Message, "Measurement failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void UniformityOpenImageCsvButton_Click(object sender, RoutedEventArgs e)
+    {
+        var imageDialog = new OpenFileDialog
+        {
+            Title = "Open uniformity image",
+            Filter = "Image files|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.bmp|All files|*.*"
+        };
+
+        if (imageDialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        var csvDialog = new OpenFileDialog
+        {
+            Title = "Open uniformity results CSV",
+            Filter = "CSV files|*.csv|All files|*.*",
+            InitialDirectory = IOPath.GetDirectoryName(imageDialog.FileName)
+        };
+
+        if (csvDialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            AnalyzeUniformityFromResultsCsv(imageDialog.FileName, csvDialog.FileName, "Imported uniformity image and results CSV.");
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Uniformity results CSV import failed.";
+            MessageBox.Show(this, ex.Message, "Could not load uniformity results CSV", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -48,12 +80,7 @@ public partial class MainWindow
             return;
         }
 
-        var dialog = new SaveFileDialog
-        {
-            Title = "Export uniformity CSV",
-            Filter = "CSV files|*.csv|All files|*.*",
-            FileName = IOPath.ChangeExtension(IOPath.GetFileName(_currentUniformityResult.ImagePath), ".csv")
-        };
+        var dialog = CreateCsvReportSaveDialog("Export uniformity CSV", _currentUniformityResult.ImagePath);
 
         if (dialog.ShowDialog(this) != true)
         {
@@ -87,6 +114,45 @@ public partial class MainWindow
         UniformityExportButton.IsEnabled = true;
         DrawUniformityOverlay();
         StatusText.Text = "Uniformity measurement complete.";
+    }
+
+    private void OpenUniformityImage(string imagePath, bool autoLoadNeighborCsv)
+    {
+        if (autoLoadNeighborCsv)
+        {
+            var resultCsvPath = IOPath.ChangeExtension(imagePath, ".csv");
+            if (File.Exists(resultCsvPath))
+            {
+                try
+                {
+                    AnalyzeUniformityFromResultsCsv(imagePath, resultCsvPath, $"Loaded neighboring uniformity results CSV: {resultCsvPath}");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, "Neighboring uniformity CSV could not be loaded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        StatusText.Text = "Measuring uniformity image...";
+        _currentUniformityResult = _uniformityAnalyzer.Analyze(imagePath);
+        UniformityPreviewImage.Source = LoadBitmap(imagePath);
+        UniformityFileNameText.Text = imagePath;
+        ShowUniformityResult(_currentUniformityResult);
+    }
+
+    private void AnalyzeUniformityFromResultsCsv(string imagePath, string csvPath, string statusText)
+    {
+        var samples = UniformityResultSampleCsv.LoadSamples(csvPath);
+        _currentUniformityResult = _uniformityAnalyzer.Analyze(imagePath, new UniformityAnalysisOptions
+        {
+            Samples = samples
+        });
+        UniformityPreviewImage.Source = LoadBitmap(imagePath);
+        UniformityFileNameText.Text = imagePath;
+        ShowUniformityResult(_currentUniformityResult);
+        StatusText.Text = statusText;
     }
 
     private void DrawUniformityOverlay()
