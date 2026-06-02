@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace Imcheck.App;
@@ -34,6 +35,7 @@ public partial class MainWindow : Window
         ConfigureQ13Columns();
         ConfigureUniformityColumns();
         InitializeGeneratorTab();
+        RefreshMainTabButtons();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -61,6 +63,50 @@ public partial class MainWindow : Window
 
         var borderColor = ColorRef(42, 42, 42);
         _ = DwmSetWindowAttribute(handle, DwmWindowAttribute.BorderColor, ref borderColor, Marshal.SizeOf<int>());
+    }
+
+    private void Q13NavButton_Click(object sender, RoutedEventArgs e)
+    {
+        MainTabs.SelectedIndex = 0;
+    }
+
+    private void UniformityNavButton_Click(object sender, RoutedEventArgs e)
+    {
+        MainTabs.SelectedIndex = 1;
+    }
+
+    private void GeneratorNavButton_Click(object sender, RoutedEventArgs e)
+    {
+        MainTabs.SelectedIndex = 2;
+    }
+
+    private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.Source == MainTabs)
+        {
+            RefreshMainTabButtons();
+        }
+    }
+
+    private void RefreshMainTabButtons()
+    {
+        MarkMainTabButton(Q13NavButton, MainTabs.SelectedIndex == 0);
+        MarkMainTabButton(UniformityNavButton, MainTabs.SelectedIndex == 1);
+        MarkMainTabButton(GeneratorNavButton, MainTabs.SelectedIndex == 2);
+    }
+
+    private static void MarkMainTabButton(Button button, bool active)
+    {
+        button.Background = active ? NavBrushFromRgb(36, 36, 36) : NavBrushFromRgb(20, 20, 20);
+        button.Foreground = active ? NavBrushFromRgb(200, 169, 110) : NavBrushFromRgb(232, 228, 220);
+        button.BorderBrush = active ? NavBrushFromRgb(200, 169, 110) : NavBrushFromRgb(42, 42, 42);
+    }
+
+    private static SolidColorBrush NavBrushFromRgb(byte red, byte green, byte blue)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(red, green, blue));
+        brush.Freeze();
+        return brush;
     }
 
     private static int ColorRef(byte red, byte green, byte blue)
