@@ -12,6 +12,8 @@ namespace Imcheck.App;
 public partial class MainWindow
 {
     private bool _generatorInitializing;
+    private string? _lastGeneratedFileName;
+    private string? _lastGeneratedOutputDirectory;
 
     private void InitializeGeneratorTab()
     {
@@ -29,7 +31,8 @@ public partial class MainWindow
         GeneratorNoiseBlurTextBox.Text = "0";
         GeneratorNoisePatchBiasTextBox.Text = "0";
         GeneratorNoiseSeedTextBox.Text = "1234";
-        GeneratorOutputPathTextBox.Text = DefaultGeneratorOutputPath();
+        SetDefaultGeneratorOutputDirectory(force: true);
+        SetDefaultGeneratorFileName(force: true);
         _generatorInitializing = false;
 
         RefreshGeneratorTargetDetails();
@@ -44,7 +47,8 @@ public partial class MainWindow
             return;
         }
 
-        GeneratorOutputPathTextBox.Text = DefaultGeneratorOutputPath();
+        SetDefaultGeneratorOutputDirectory(force: false);
+        SetDefaultGeneratorFileName(force: true);
         RefreshGeneratorTargetDetails();
         RefreshGeneratorPreview();
     }
@@ -65,29 +69,30 @@ public partial class MainWindow
         }
 
         RefreshGeneratorDpiButtons();
-        RefreshGeneratorOutputName();
+        SetDefaultGeneratorFileName(force: false);
         RefreshGeneratorPreview();
     }
 
-    private void GeneratorBrowseButton_Click(object sender, RoutedEventArgs e)
+    private void GeneratorOutputDirectoryButton_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog
         {
-            Title = "Save generated grayscale target",
-            Filter = "TIFF files|*.tif;*.tiff|PNG files|*.png|All files|*.*",
-            DefaultExt = ".tif",
-            FileName = IOPath.GetFileName(GeneratorOutputPathTextBox.Text)
+            Title = "Choose output directory",
+            Filter = "Folder selection|*.folder",
+            FileName = "Select this folder",
+            InitialDirectory = Directory.Exists(GeneratorOutputDirectoryTextBox.Text)
+                ? GeneratorOutputDirectoryTextBox.Text
+                : Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
         };
-
-        var currentDirectory = IOPath.GetDirectoryName(GeneratorOutputPathTextBox.Text);
-        if (!string.IsNullOrWhiteSpace(currentDirectory))
-        {
-            dialog.InitialDirectory = currentDirectory;
-        }
 
         if (dialog.ShowDialog(this) == true)
         {
-            GeneratorOutputPathTextBox.Text = dialog.FileName;
+            var directory = IOPath.GetDirectoryName(dialog.FileName);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                GeneratorOutputDirectoryTextBox.Text = directory;
+                _lastGeneratedOutputDirectory = null;
+            }
         }
     }
 
@@ -96,12 +101,7 @@ public partial class MainWindow
         try
         {
             var dpi = ParsePositiveInt(GeneratorDpiTextBox.Text, "DPI");
-            var outputPath = GeneratorOutputPathTextBox.Text;
-            if (string.IsNullOrWhiteSpace(outputPath))
-            {
-                outputPath = IOPath.Combine(Environment.CurrentDirectory, DefaultGeneratorFileName(dpi));
-                GeneratorOutputPathTextBox.Text = outputPath;
-            }
+            var outputPath = CreateGeneratorOutputPath(dpi);
 
             StatusText.Text = $"Generating {CurrentGeneratorDisplayName()}...";
             var (width, height) = GenerateSelectedTarget(outputPath, dpi);
@@ -238,26 +238,29 @@ public partial class MainWindow
         GeneratorPatchGrid.ItemsSource = MunsellLinearGrayscaleTargetGenerator.Patches.Select(GeneratorPatchRow.FromMunsellPatch).ToList();
     }
 
-    private void RefreshGeneratorOutputName()
+    private void SetDefaultGeneratorFileName(bool force)
     {
         if (!int.TryParse(GeneratorDpiTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var dpi) || dpi <= 0)
         {
             return;
         }
 
-        var currentPath = GeneratorOutputPathTextBox.Text;
-        if (string.IsNullOrWhiteSpace(currentPath))
+        var defaultName = DefaultGeneratorFileName(dpi);
+        if (force || string.IsNullOrWhiteSpace(GeneratorFileNameTextBox.Text) || GeneratorFileNameTextBox.Text == _lastGeneratedFileName)
         {
-            return;
+            GeneratorFileNameTextBox.Text = defaultName;
+            _lastGeneratedFileName = defaultName;
         }
+    }
 
-        var directory = IOPath.GetDirectoryName(currentPath);
-        if (string.IsNullOrWhiteSpace(directory))
+    private void SetDefaultGeneratorOutputDirectory(bool force)
+    {
+        var defaultDirectory = DefaultGeneratorOutputDirectory();
+        if (force || string.IsNullOrWhiteSpace(GeneratorOutputDirectoryTextBox.Text) || GeneratorOutputDirectoryTextBox.Text == _lastGeneratedOutputDirectory)
         {
-            directory = Environment.CurrentDirectory;
+            GeneratorOutputDirectoryTextBox.Text = defaultDirectory;
+            _lastGeneratedOutputDirectory = defaultDirectory;
         }
-
-        GeneratorOutputPathTextBox.Text = IOPath.Combine(directory, DefaultGeneratorFileName(dpi));
     }
 
     private void RefreshGeneratorDpiButtons()
@@ -280,20 +283,124 @@ public partial class MainWindow
         return ((int)Math.Round(widthMm / 25.4 * dpi), (int)Math.Round(heightMm / 25.4 * dpi));
     }
 
-    private string DefaultGeneratorOutputPath()
+    private string CreateGeneratorOutputPath(int dpi)
     {
-        var dpi = int.TryParse(GeneratorDpiTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedDpi) && parsedDpi > 0
-            ? parsedDpi
-            : MunsellLinearGrayscaleTargetGenerator.DefaultDpi;
+        var directory = GeneratorOutputDirectoryTextBox.Text;
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = DefaultGeneratorOutputDirectory();
+            GeneratorOutputDirectoryTextBox.Text = directory;
+            _lastGeneratedOutputDirectory = directory;
+        }
 
-        return IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), DefaultGeneratorFileName(dpi));
+        Directory.CreateDirectory(directory);
+
+        var fileName = GeneratorFileNameTextBox.Text;
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            fileName = DefaultGeneratorFileName(dpi);
+            GeneratorFileNameTextBox.Text = fileName;
+            _lastGeneratedFileName = fileName;
+        }
+
+        if (string.IsNullOrWhiteSpace(IOPath.GetExtension(fileName)))
+        {
+            fileName = IOPath.ChangeExtension(fileName, ".tif");
+            GeneratorFileNameTextBox.Text = fileName;
+        }
+
+        return IOPath.Combine(directory, fileName);
     }
 
     private string DefaultGeneratorFileName(int dpi)
     {
-        return CurrentGeneratorTarget() == GeneratorTarget.Q13
-            ? $"Kodak_Q13_Grayscale_{dpi}dpi.tif"
-            : $"Munsell_Linear_Grayscale_{dpi}dpi.tif";
+        var targetName = CurrentGeneratorTarget() == GeneratorTarget.Q13
+            ? "Kodak_Q13_Grayscale"
+            : "Munsell_Linear_Grayscale";
+
+        return $"{targetName}_{dpi}dpi_{DefaultGeneratorNoiseFileNameSegment()}.tif";
+    }
+
+    private string DefaultGeneratorNoiseFileNameSegment()
+    {
+        if (GeneratorNoiseEnabledCheckBox.IsChecked != true)
+        {
+            return "clean";
+        }
+
+        var model = ((GeneratorNoiseModelComboBox.SelectedItem as ComboBoxItem)?.Tag as string) ?? "gaussian";
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"noise-{SanitizeFileNameToken(model)}_amt-{SanitizeFileNameToken(GeneratorNoiseAmountTextBox.Text)}_cov-{SanitizeFileNameToken(GeneratorNoiseCoverageTextBox.Text)}_grad-{SanitizeFileNameToken(GeneratorNoiseGradientTextBox.Text)}_blur-{SanitizeFileNameToken(GeneratorNoiseBlurTextBox.Text)}_bias-{SanitizeFileNameToken(GeneratorNoisePatchBiasTextBox.Text)}_seed-{SanitizeFileNameToken(GeneratorNoiseSeedTextBox.Text)}");
+    }
+
+    private static string SanitizeFileNameToken(string raw)
+    {
+        var trimmed = raw.Trim();
+        if (trimmed.Length == 0)
+        {
+            return "empty";
+        }
+
+        var invalidChars = IOPath.GetInvalidFileNameChars();
+        var chars = new char[trimmed.Length];
+        for (var i = 0; i < trimmed.Length; i++)
+        {
+            var value = trimmed[i];
+            chars[i] = invalidChars.Contains(value) || char.IsWhiteSpace(value)
+                ? '-'
+                : value switch
+                {
+                    '.' => 'p',
+                    ',' => 'p',
+                    '+' => 'p',
+                    '-' => 'm',
+                    _ => value
+                };
+        }
+
+        return new string(chars);
+    }
+
+    private string DefaultGeneratorOutputDirectory()
+    {
+        var grayscaleRoot = IOPath.Combine(ProjectOutputRootDirectory(), "Grayscale");
+        if (CurrentGeneratorTarget() == GeneratorTarget.Q13)
+        {
+            var q13Directory = IOPath.Combine(grayscaleRoot, "Q13");
+            if (Directory.Exists(q13Directory))
+            {
+                return q13Directory;
+            }
+
+            var q13WithCardDirectory = IOPath.Combine(grayscaleRoot, "Perfect Q13 with card");
+            if (Directory.Exists(q13WithCardDirectory))
+            {
+                return q13WithCardDirectory;
+            }
+
+            return q13Directory;
+        }
+
+        return IOPath.Combine(grayscaleRoot, "Munsell");
+    }
+
+    private static string ProjectOutputRootDirectory()
+    {
+        const string outputFolderName = "Generated Images";
+        var directory = AppContext.BaseDirectory;
+        while (!string.IsNullOrWhiteSpace(directory))
+        {
+            var candidate = IOPath.Combine(directory, outputFolderName);
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = Directory.GetParent(directory)?.FullName;
+        }
+
+        return IOPath.Combine(AppContext.BaseDirectory, outputFolderName);
     }
 
     private string CurrentGeneratorDisplayName()
