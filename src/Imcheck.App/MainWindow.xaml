@@ -523,38 +523,6 @@
                             <StackPanel Grid.Column="0">
                                 <Border Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16" Margin="0,0,0,14">
                                     <StackPanel>
-                                        <TextBlock Text="SPECIFICATIONS" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="145" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="26" />
-                                                <RowDefinition Height="26" />
-                                                <RowDefinition Height="26" />
-                                                <RowDefinition Height="26" />
-                                                <RowDefinition Height="26" />
-                                                <RowDefinition Height="26" />
-                                            </Grid.RowDefinitions>
-                                            <TextBlock Text="Patches" Foreground="#666666" FontFamily="Consolas" />
-                                            <TextBlock x:Name="GeneratorPatchCountText" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
-                                            <TextBlock Grid.Row="1" Text="L* range" Foreground="#666666" FontFamily="Consolas" />
-                                            <TextBlock x:Name="GeneratorLStarRangeText" Grid.Row="1" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
-                                            <TextBlock Grid.Row="2" Text="Card size" Foreground="#666666" FontFamily="Consolas" />
-                                            <TextBlock x:Name="GeneratorCardSizeText" Grid.Row="2" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
-                                            <TextBlock Grid.Row="3" Text="Values" Foreground="#666666" FontFamily="Consolas" />
-                                            <TextBlock x:Name="GeneratorValuesText" Grid.Row="3" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
-                                            <TextBlock Grid.Row="4" Text="Output" Foreground="#666666" FontFamily="Consolas" />
-                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="TIFF / PNG" Foreground="#E8E4DC" FontFamily="Consolas" />
-                                            <TextBlock Grid.Row="5" Text="Current size" Foreground="#666666" FontFamily="Consolas" />
-                                            <TextBlock x:Name="GeneratorPixelSizeText" Grid.Row="5" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16" Margin="0,0,0,14">
-                                    <StackPanel>
                                         <TextBlock Text="NOISE" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
                                         <CheckBox x:Name="GeneratorNoiseEnabledCheckBox" Content="Enable noisy export" Foreground="#E8E4DC" Margin="0,0,0,8" Checked="GeneratorOption_Changed" Unchecked="GeneratorOption_Changed" />
                                         <TextBlock Text="Model" Foreground="#666666" FontFamily="Consolas" FontSize="11" />
@@ -624,6 +592,38 @@
                                         <TextBox x:Name="GeneratorOutputPathTextBox" Margin="0,5,0,10" Height="28" />
                                         <Button Height="34" Click="GeneratorGenerateButton_Click">Save target</Button>
                                         <TextBlock x:Name="GeneratorExportStatusText" Margin="0,10,0,0" TextWrapping="Wrap" Foreground="#6DBB8A" FontFamily="Consolas" FontSize="11" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#181818" BorderBrush="#2A2A2A" BorderThickness="1" Padding="16" Margin="0,14,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="SPECIFICATIONS" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" Foreground="#C8A96E" Margin="0,0,0,10" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="145" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                                <RowDefinition Height="26" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Patches" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorPatchCountText" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="1" Text="L* range" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorLStarRangeText" Grid.Row="1" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="2" Text="Card size" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorCardSizeText" Grid.Row="2" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="3" Text="Values" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorValuesText" Grid.Row="3" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="4" Text="Output" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="TIFF / PNG" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                            <TextBlock Grid.Row="5" Text="Current size" Foreground="#666666" FontFamily="Consolas" />
+                                            <TextBlock x:Name="GeneratorPixelSizeText" Grid.Row="5" Grid.Column="1" Text="-" Foreground="#E8E4DC" FontFamily="Consolas" />
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

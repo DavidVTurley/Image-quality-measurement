@@ -73,8 +73,9 @@ public partial class MainWindow
     {
         var dialog = new SaveFileDialog
         {
-            Title = "Save generated grayscale target PNG",
-            Filter = "PNG files|*.png|All files|*.*",
+            Title = "Save generated grayscale target",
+            Filter = "TIFF files|*.tif;*.tiff|PNG files|*.png|All files|*.*",
+            DefaultExt = ".tif",
             FileName = IOPath.GetFileName(GeneratorOutputPathTextBox.Text)
         };
 
@@ -105,7 +106,7 @@ public partial class MainWindow
             StatusText.Text = $"Generating {CurrentGeneratorDisplayName()}...";
             var (width, height) = GenerateSelectedTarget(outputPath, dpi);
             GeneratorExportStatusText.Foreground = BrushFromRgb(109, 187, 138);
-            GeneratorExportStatusText.Text = string.Create(CultureInfo.InvariantCulture, $"Generated {width}x{height} PNG.");
+            GeneratorExportStatusText.Text = string.Create(CultureInfo.InvariantCulture, $"Generated {width}x{height} {OutputFormatName(outputPath)}.");
             StatusText.Text = $"Generated {CurrentGeneratorDisplayName()}: {outputPath}";
         }
         catch (Exception ex)
@@ -291,8 +292,8 @@ public partial class MainWindow
     private string DefaultGeneratorFileName(int dpi)
     {
         return CurrentGeneratorTarget() == GeneratorTarget.Q13
-            ? $"Kodak_Q13_Grayscale_{dpi}dpi.png"
-            : $"Munsell_Linear_Grayscale_{dpi}dpi.png";
+            ? $"Kodak_Q13_Grayscale_{dpi}dpi.tif"
+            : $"Munsell_Linear_Grayscale_{dpi}dpi.tif";
     }
 
     private string CurrentGeneratorDisplayName()
@@ -300,6 +301,16 @@ public partial class MainWindow
         return CurrentGeneratorTarget() == GeneratorTarget.Q13
             ? "Kodak Q13 Grayscale target"
             : "Munsell Linear Grayscale target";
+    }
+
+    private static string OutputFormatName(string outputPath)
+    {
+        return Path.GetExtension(outputPath).ToLowerInvariant() switch
+        {
+            ".tif" or ".tiff" => "TIFF",
+            ".png" => "PNG",
+            _ => "image"
+        };
     }
 
     private GeneratorTarget CurrentGeneratorTarget()

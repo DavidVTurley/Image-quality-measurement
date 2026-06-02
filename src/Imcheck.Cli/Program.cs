@@ -29,7 +29,7 @@ static async Task<int> RunAsync(string[] args)
 
         if (options.GenerateTarget == GenerationTarget.MunsellLinearGrayscale)
         {
-            var outputPath = options.CsvPath ?? Path.Combine(Environment.CurrentDirectory, "Munsell_Linear_Grayscale_600dpi.png");
+            var outputPath = options.CsvPath ?? Path.Combine(Environment.CurrentDirectory, "Munsell_Linear_Grayscale_600dpi.tif");
             var result = new MunsellLinearGrayscaleTargetGenerator().Generate(
                 outputPath,
                 new MunsellLinearGrayscaleTargetGeneratorOptions { Dpi = options.Dpi });
@@ -40,7 +40,7 @@ static async Task<int> RunAsync(string[] args)
 
         if (options.GenerateTarget == GenerationTarget.Q13Grayscale)
         {
-            var outputPath = options.CsvPath ?? Path.Combine(Environment.CurrentDirectory, "Kodak_Q13_Grayscale_600dpi.png");
+            var outputPath = options.CsvPath ?? Path.Combine(Environment.CurrentDirectory, "Kodak_Q13_Grayscale_600dpi.tif");
             var result = new Q13GrayscaleTargetGenerator().Generate(
                 outputPath,
                 new Q13GrayscaleTargetGeneratorOptions { Dpi = options.Dpi });
@@ -161,7 +161,7 @@ Imcheck.Cli - Imcheck-style target measurement
 
 Usage:
   Imcheck.Cli <image-path> [--target q13|qa62] [--points <points.csv>] [--out <results.csv>] [--imcheck-out <results.xls>] [--sample-size <odd-pixels>] [--sampling <pix-per-inch>]
-  Imcheck.Cli --generate qa62|munsell|q13 [--out <target.png>] [--dpi <pixels-per-inch>]
+  Imcheck.Cli --generate qa62|munsell|q13 [--out <target.tif>] [--dpi <pixels-per-inch>]
   Imcheck.Cli --analyze white-sheet <image-path> [--out <results.csv>] [--sample-size <odd-pixels-min-33>] [--color-space srgb|adobe-rgb|ecirgbv2] [--quality full|light|extra-light] [--image-size a3|a2|a1|a0]
 
 Examples:
@@ -170,8 +170,8 @@ Examples:
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\points.csv" --imcheck-out "C:\path\results.xls"
   dotnet run --project src\Imcheck.Cli -- --target qa62 "C:\path\QA-62.jpg" --out "C:\path\qa62.csv" --imcheck-out "C:\path\qa62.xls"
   dotnet run --project src\Imcheck.Cli -- --generate qa62 --out "C:\path\QA62_Recreation_600dpi.png" --dpi 600
-  dotnet run --project src\Imcheck.Cli -- --generate munsell --out "C:\path\Munsell_Linear_Grayscale_600dpi.png" --dpi 600
-  dotnet run --project src\Imcheck.Cli -- --generate q13 --out "C:\path\Kodak_Q13_Grayscale_600dpi.png" --dpi 600
+  dotnet run --project src\Imcheck.Cli -- --generate munsell --out "C:\path\Munsell_Linear_Grayscale_600dpi.tif" --dpi 600
+  dotnet run --project src\Imcheck.Cli -- --generate q13 --out "C:\path\Kodak_Q13_Grayscale_600dpi.tif" --dpi 600
   dotnet run --project src\Imcheck.Cli -- --analyze white-sheet "C:\path\white-sheet.tif" --out "C:\path\white-sheet.csv" --color-space ecirgbv2 --quality full --image-size a3
 
 White-sheet analysis:

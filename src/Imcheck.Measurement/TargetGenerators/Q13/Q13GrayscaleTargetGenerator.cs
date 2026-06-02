@@ -45,7 +45,7 @@ public sealed class Q13GrayscaleTargetGenerator
             Directory.CreateDirectory(directory);
         }
 
-        if (!Cv2.ImWrite(outputPath, image))
+        if (!GrayscaleTiffWriter.Write(outputPath, image))
         {
             throw new InvalidOperationException($"Unable to write generated Q13 grayscale target: {outputPath}");
         }

@@ -54,7 +54,7 @@ public sealed class MunsellLinearGrayscaleTargetGenerator
             Directory.CreateDirectory(directory);
         }
 
-        if (!Cv2.ImWrite(outputPath, image))
+        if (!GrayscaleTiffWriter.Write(outputPath, image))
         {
             throw new InvalidOperationException($"Unable to write generated Munsell Linear Grayscale target: {outputPath}");
         }

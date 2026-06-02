@@ -34,6 +34,29 @@ public sealed class Q13GrayscaleTargetGeneratorTests
     }
 
     [Fact]
+    public void GenerateCreatesTiffWithEmbeddedEciGrayProfile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.tif");
+        try
+        {
+            var result = new Q13GrayscaleTargetGenerator().Generate(path);
+
+            using var image = Cv2.ImRead(path, ImreadModes.Grayscale);
+            Assert.False(image.Empty());
+            Assert.Equal(result.Width, image.Width);
+            Assert.Equal(result.Height, image.Height);
+            Assert.True(ContainsSequence(File.ReadAllBytes(path), "eciRGB v2 Gray"u8.ToArray()));
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void GeneratedPatchPixelsMatchDensityModelValues()
     {
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
@@ -98,5 +121,28 @@ public sealed class Q13GrayscaleTargetGeneratorTests
             if (File.Exists(cleanPath)) File.Delete(cleanPath);
             if (File.Exists(noisyPath)) File.Delete(noisyPath);
         }
+    }
+
+    private static bool ContainsSequence(byte[] haystack, byte[] needle)
+    {
+        for (var i = 0; i <= haystack.Length - needle.Length; i++)
+        {
+            var matched = true;
+            for (var j = 0; j < needle.Length; j++)
+            {
+                if (haystack[i + j] != needle[j])
+                {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (matched)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
