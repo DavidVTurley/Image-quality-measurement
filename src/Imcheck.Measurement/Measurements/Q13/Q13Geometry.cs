@@ -190,3 +190,14 @@ public sealed record Q13DetectionResult(bool Found, Q13StripGeometry? Geometry, 
 {
     public static Q13DetectionResult NotFound { get; } = new(false, null, 0);
 }
+
+public sealed record Q13DetectionOptions
+{
+    public bool ShowDebugImages { get; init; }
+
+    public int DebugWaitMilliseconds { get; init; } = 1;
+
+    public int MaximumDebugImageDimension { get; init; } = 1400;
+
+    public string DebugWindowPrefix { get; init; } = "Q13 detection";
+}

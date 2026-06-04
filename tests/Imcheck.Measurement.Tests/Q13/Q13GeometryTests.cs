@@ -1,10 +1,19 @@
 using Imcheck.Measurement.Measurements.Q13;
+using System.Diagnostics;
 using OpenCvSharp;
+using Xunit.Abstractions;
 
 namespace Imcheck.Measurement.Tests;
 
 public sealed class Q13GeometryTests
 {
+    private readonly ITestOutputHelper _output;
+
+    public Q13GeometryTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
+
     [Fact]
     public void DefaultSampleRegionsCoverTwentyPatchCenters()
     {
@@ -152,6 +161,28 @@ public sealed class Q13GeometryTests
     }
 
     [Fact]
+    public void DetectorReturnsOriginalCoordinatesForLargeImage()
+    {
+        const double scale = 4.0;
+        using var image = CreateRotatedQ13Image(out var geometry, out _);
+        using var largeImage = new Mat();
+        Cv2.Resize(image, largeImage, new Size(), scale, scale, InterpolationFlags.Nearest);
+
+        var stopwatch = Stopwatch.StartNew();
+        var result = new Q13GrayscaleDetector().Detect(largeImage);
+        stopwatch.Stop();
+        _output.WriteLine($"Large synthetic Q13 detection: {stopwatch.ElapsedMilliseconds} ms");
+
+        Assert.True(result.Found, $"Expected large rotated Q13 target to be detected; score was {result.Score:0.###}.");
+        Assert.NotNull(result.Geometry);
+        var detected = result.Geometry!;
+        var expectedCenter = new Q13Point(geometry.Center.X * scale, geometry.Center.Y * scale);
+        Assert.InRange(Distance(detected.Center, expectedCenter), 0, 160);
+        Assert.InRange(detected.Width, geometry.Width * scale - 240, geometry.Width * scale + 240);
+        Assert.True(detected.Height > geometry.Height * scale * 0.35);
+    }
+
+    [Fact]
     public void DetectorIncludesWhitePatchInTightCrop()
     {
         const int patchWidth = 32;
@@ -280,6 +311,13 @@ public sealed class Q13GeometryTests
     private static Point ToPoint(Q13Point point)
     {
         return new Point((int)Math.Round(point.X), (int)Math.Round(point.Y));
+    }
+
+    private static double Distance(Q13Point first, Q13Point second)
+    {
+        var dx = first.X - second.X;
+        var dy = first.Y - second.Y;
+        return Math.Sqrt(dx * dx + dy * dy);
     }
 
     private static string WriteTempImage(Mat image)
