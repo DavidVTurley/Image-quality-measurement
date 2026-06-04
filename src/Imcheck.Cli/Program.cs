@@ -33,13 +33,16 @@ static void PrintUsage()
 Imcheck.Cli - Imcheck-style target measurement
 
 Usage:
-  Imcheck.Cli <image-path> [--target q13|qa62] [--points <points.csv>] [--out <results.csv>] [--imcheck-out <results.xls>] [--sample-size <odd-pixels>] [--sampling <pix-per-inch>]
+  Imcheck.Cli <image-path> [--target q13|qa62] [--points <points.csv|q13-results.csv>] [--out <results.csv>] [--imcheck-out <results.xls>] [--compare-imcheck <reference.xls>] [--fit-outlier-sigma] [--fit-sigma-min <sigma>] [--fit-sigma-max <sigma>] [--fit-sigma-step <sigma>] [--sample-size <odd-pixels>] [--sampling <pix-per-inch>] [--reject-outliers] [--outlier-sigma <sigma>]
   Imcheck.Cli --generate qa62|munsell|q13 [--out <target.tif>] [--dpi <pixels-per-inch>]
   Imcheck.Cli --analyze white-sheet <image-path> [--out <results.csv>] [--sample-size <odd-pixels-min-33>] [--color-space srgb|adobe-rgb|ecirgbv2] [--quality full|light|extra-light] [--image-size a3|a2|a1|a0]
 
 Examples:
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif"
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\points.csv" --out "C:\path\results.csv"
+  dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\previous-results.csv" --reject-outliers --out "C:\path\results.csv"
+  dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\previous-results.csv" --compare-imcheck "C:\path\noise.xls"
+  dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\previous-results.csv" --compare-imcheck "C:\path\noise.xls" --fit-outlier-sigma
   dotnet run --project src\Imcheck.Cli -- "C:\path\image.tif" --points "C:\path\points.csv" --imcheck-out "C:\path\results.xls"
   dotnet run --project src\Imcheck.Cli -- --target qa62 "C:\path\QA-62.jpg" --out "C:\path\qa62.csv" --imcheck-out "C:\path\qa62.xls"
   dotnet run --project src\Imcheck.Cli -- --generate qa62 --out "C:\path\QA62_Recreation_600dpi.png" --dpi 600
@@ -60,6 +63,11 @@ or:
   X,Y
   31.31,69.48
   ...
+
+Q13 result CSV files written by this CLI can also be passed to --points. The
+SampleCenterX, SampleCenterY, SampleWidth, and SampleHeight columns are reused.
+Passing --outlier-sigma also enables outlier rejection.
+Use --fit-outlier-sigma with --compare-imcheck to search rejection settings.
 """);
 }
 
@@ -71,8 +79,15 @@ internal sealed record CliOptions(
     string? PointsPath,
     string? CsvPath,
     string? ImcheckTextPath,
+    string? ImcheckReferencePath,
+    bool FitOutlierSigma,
+    double FitSigmaMin,
+    double FitSigmaMax,
+    double FitSigmaStep,
     int SampleSize,
     bool SampleSizeWasProvided,
+    bool RejectOutliers,
+    double OutlierSigmaThreshold,
     double SamplingPixelsPerInch,
     int Dpi,
     RgbColorSpace ColorSpace,
@@ -88,8 +103,15 @@ internal sealed record CliOptions(
         string? pointsPath = null;
         string? csvPath = null;
         string? imcheckTextPath = null;
+        string? imcheckReferencePath = null;
+        var fitOutlierSigma = false;
+        var fitSigmaMin = 2.0;
+        var fitSigmaMax = 6.0;
+        var fitSigmaStep = 0.5;
         var sampleSize = 39;
         var sampleSizeWasProvided = false;
+        var rejectOutliers = false;
+        var outlierSigmaThreshold = 3.0;
         var samplingPixelsPerInch = 301.1;
         var dpi = Qa62TargetGenerator.DefaultDpi;
         var colorSpace = RgbColorSpace.SRgb;
@@ -137,6 +159,33 @@ internal sealed record CliOptions(
                 case "--imcheck-out":
                     imcheckTextPath = RequiredValue(args, ref i, arg);
                     break;
+                case "--compare-imcheck":
+                    imcheckReferencePath = RequiredValue(args, ref i, arg);
+                    break;
+                case "--fit-outlier-sigma":
+                    fitOutlierSigma = true;
+                    break;
+                case "--fit-sigma-min":
+                    var rawFitSigmaMin = RequiredValue(args, ref i, arg);
+                    if (!double.TryParse(rawFitSigmaMin, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out fitSigmaMin))
+                    {
+                        throw new ArgumentException("--fit-sigma-min must be a number.");
+                    }
+                    break;
+                case "--fit-sigma-max":
+                    var rawFitSigmaMax = RequiredValue(args, ref i, arg);
+                    if (!double.TryParse(rawFitSigmaMax, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out fitSigmaMax))
+                    {
+                        throw new ArgumentException("--fit-sigma-max must be a number.");
+                    }
+                    break;
+                case "--fit-sigma-step":
+                    var rawFitSigmaStep = RequiredValue(args, ref i, arg);
+                    if (!double.TryParse(rawFitSigmaStep, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out fitSigmaStep))
+                    {
+                        throw new ArgumentException("--fit-sigma-step must be a number.");
+                    }
+                    break;
                 case "--sample-size":
                     var rawSampleSize = RequiredValue(args, ref i, arg);
                     if (!int.TryParse(rawSampleSize, out sampleSize))
@@ -144,6 +193,17 @@ internal sealed record CliOptions(
                         throw new ArgumentException("--sample-size must be an integer.");
                     }
                     sampleSizeWasProvided = true;
+                    break;
+                case "--reject-outliers":
+                    rejectOutliers = true;
+                    break;
+                case "--outlier-sigma":
+                    var rawOutlierSigma = RequiredValue(args, ref i, arg);
+                    if (!double.TryParse(rawOutlierSigma, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out outlierSigmaThreshold))
+                    {
+                        throw new ArgumentException("--outlier-sigma must be a number.");
+                    }
+                    rejectOutliers = true;
                     break;
                 case "--sampling":
                     var rawSampling = RequiredValue(args, ref i, arg);
@@ -218,14 +278,14 @@ internal sealed record CliOptions(
                 throw new ArgumentException("Image path cannot be provided with --generate.");
             }
 
-            if (pointsPath is not null || imcheckTextPath is not null)
+            if (pointsPath is not null || imcheckTextPath is not null || imcheckReferencePath is not null || fitOutlierSigma)
             {
-                throw new ArgumentException("--points and --imcheck-out are not supported with --generate.");
+                throw new ArgumentException("--points, --imcheck-out, --compare-imcheck, and --fit-outlier-sigma are not supported with --generate.");
             }
 
-            if (sampleSizeWasProvided || samplingPixelsPerInch != 301.1)
+            if (sampleSizeWasProvided || rejectOutliers || outlierSigmaThreshold != 3.0 || samplingPixelsPerInch != 301.1)
             {
-                throw new ArgumentException("--sample-size and --sampling are only supported when measuring images.");
+                throw new ArgumentException("--sample-size, --reject-outliers, --outlier-sigma, and --sampling are only supported when measuring images.");
             }
 
             if (dpi <= 0)
@@ -233,7 +293,7 @@ internal sealed record CliOptions(
                 throw new ArgumentException("--dpi must be positive.");
             }
 
-            return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
+            return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, imcheckReferencePath, fitOutlierSigma, fitSigmaMin, fitSigmaMax, fitSigmaStep, sampleSize, sampleSizeWasProvided, rejectOutliers, outlierSigmaThreshold, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
         }
 
         if (analysisTarget is not null)
@@ -248,14 +308,14 @@ internal sealed record CliOptions(
                 throw new FileNotFoundException("Image file was not found.", imagePath);
             }
 
-            if (pointsPath is not null || imcheckTextPath is not null)
+            if (pointsPath is not null || imcheckTextPath is not null || imcheckReferencePath is not null || fitOutlierSigma)
             {
-                throw new ArgumentException("--points and --imcheck-out are not supported with --analyze.");
+                throw new ArgumentException("--points, --imcheck-out, --compare-imcheck, and --fit-outlier-sigma are not supported with --analyze.");
             }
 
-            if (samplingPixelsPerInch != 301.1)
+            if (rejectOutliers || outlierSigmaThreshold != 3.0 || samplingPixelsPerInch != 301.1)
             {
-                throw new ArgumentException("--sampling is only supported when measuring targets.");
+                throw new ArgumentException("--reject-outliers, --outlier-sigma, and --sampling are only supported when measuring targets.");
             }
 
             if (sampleSize < 33 || sampleSize % 2 == 0)
@@ -263,7 +323,7 @@ internal sealed record CliOptions(
                 throw new ArgumentException("--sample-size must be an odd integer of at least 33 for white-sheet analysis.");
             }
 
-            return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
+            return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, imcheckReferencePath, fitOutlierSigma, fitSigmaMin, fitSigmaMax, fitSigmaStep, sampleSize, sampleSizeWasProvided, rejectOutliers, outlierSigmaThreshold, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
         }
 
         if (imagePath is null)
@@ -281,9 +341,29 @@ internal sealed record CliOptions(
             throw new FileNotFoundException("Points file was not found.", pointsPath);
         }
 
+        if (imcheckReferencePath is not null && !File.Exists(imcheckReferencePath))
+        {
+            throw new FileNotFoundException("ImCheck reference file was not found.", imcheckReferencePath);
+        }
+
         if (target == MeasurementTarget.Qa62 && pointsPath is not null)
         {
             throw new ArgumentException("--points is only supported with --target q13.");
+        }
+
+        if (target == MeasurementTarget.Qa62 && imcheckReferencePath is not null)
+        {
+            throw new ArgumentException("--compare-imcheck is only supported with --target q13.");
+        }
+
+        if (target == MeasurementTarget.Qa62 && fitOutlierSigma)
+        {
+            throw new ArgumentException("--fit-outlier-sigma is only supported with --target q13.");
+        }
+
+        if (fitOutlierSigma && imcheckReferencePath is null)
+        {
+            throw new ArgumentException("--fit-outlier-sigma requires --compare-imcheck.");
         }
 
         if (sampleSize <= 0 || sampleSize % 2 == 0)
@@ -296,7 +376,27 @@ internal sealed record CliOptions(
             throw new ArgumentException("--sampling must be positive.");
         }
 
-        return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, sampleSize, sampleSizeWasProvided, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
+        if (outlierSigmaThreshold <= 0)
+        {
+            throw new ArgumentException("--outlier-sigma must be positive.");
+        }
+
+        if (fitSigmaMin <= 0 || fitSigmaMax <= 0)
+        {
+            throw new ArgumentException("--fit-sigma-min and --fit-sigma-max must be positive.");
+        }
+
+        if (fitSigmaMax < fitSigmaMin)
+        {
+            throw new ArgumentException("--fit-sigma-max must be greater than or equal to --fit-sigma-min.");
+        }
+
+        if (fitSigmaStep <= 0)
+        {
+            throw new ArgumentException("--fit-sigma-step must be positive.");
+        }
+
+        return new CliOptions(imagePath, target, generateTarget, analysisTarget, pointsPath, csvPath, imcheckTextPath, imcheckReferencePath, fitOutlierSigma, fitSigmaMin, fitSigmaMax, fitSigmaStep, sampleSize, sampleSizeWasProvided, rejectOutliers, outlierSigmaThreshold, samplingPixelsPerInch, dpi, colorSpace, qualityLevel, imagePlaneSize);
     }
 
     private static string RequiredValue(string[] args, ref int index, string optionName)

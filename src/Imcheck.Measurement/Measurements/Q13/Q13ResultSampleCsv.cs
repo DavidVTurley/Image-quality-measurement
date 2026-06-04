@@ -4,6 +4,22 @@ namespace Imcheck.Measurement.Measurements.Q13;
 
 public static class Q13ResultSampleCsv
 {
+    public static bool IsResultCsv(string path)
+    {
+        using var reader = new StreamReader(path);
+        while (reader.ReadLine() is { } rawLine)
+        {
+            if (rawLine.StartsWith("Patch,", StringComparison.OrdinalIgnoreCase))
+            {
+                var headers = CsvTable.SplitLine(rawLine);
+                return headers.Any(header => string.Equals(header, "SampleCenterX", StringComparison.OrdinalIgnoreCase))
+                    && headers.Any(header => string.Equals(header, "SampleCenterY", StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        return false;
+    }
+
     public static Q13ImportedSamples Load(string path, int patchCount = 20)
     {
         var samples = LoadRows(path, patchCount);

@@ -84,6 +84,7 @@ public sealed class ResultOutputTests
             Assert.Equal(22, points[19].Y);
             var imported = Q13ResultSampleCsv.Load(path);
             Assert.Equal(5, imported.SampleSize);
+            Assert.True(Q13ResultSampleCsv.IsResultCsv(path));
         }
         finally
         {
@@ -111,11 +112,73 @@ public sealed class ResultOutputTests
             Assert.Equal(20, plain.Count);
             Assert.Equal(new Q13SamplePoint(0, 0.5, 10.5), plain[0]);
             Assert.Equal(new Q13SamplePoint(19, 20.5, 30.5), indexed[19]);
+            Assert.False(Q13ResultSampleCsv.IsResultCsv(indexedPath));
         }
         finally
         {
             if (File.Exists(plainPath)) File.Delete(plainPath);
             if (File.Exists(indexedPath)) File.Delete(indexedPath);
+        }
+    }
+
+    [Fact]
+    public void Q13ImcheckNoiseReferenceLoadsDecimalCommaScientificValues()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"q13-imcheck-reference-{Guid.NewGuid():N}.xls");
+        try
+        {
+            File.WriteAllLines(path,
+            [
+                "Total noise",
+                "R\tG\tB\tLum\tnR\tnG\tnB\tnLum\tsnrR\tsnrG\tsnrB\tsnrLum",
+                .. Enumerable.Range(0, 20).Select(_ => "2,0000e+002\t 1,0000e+002\t 5,0000e+001\t 0\t 1,5000e+000\t 2,5000e+000\t 3,5000e+000\t 0\t 0\t 0\t 0\t 0")
+            ]);
+
+            var reference = Q13ImcheckNoiseReference.Load(path);
+            var result = new Q13MeasurementResult(
+                "q13.tif",
+                300,
+                5,
+                1,
+                1,
+                1,
+                Enumerable.Range(0, 20)
+                    .Select(index => new PatchMeasurement(index, 201, 99, 50, 1, 3, 4, true, 0, 0, 0, 0, 5))
+                    .ToArray());
+
+            var comparison = reference.Compare(result);
+
+            Assert.Equal(20, reference.Rows.Count);
+            Assert.Equal(200, reference.Rows[0].Red);
+            Assert.Equal(1.5, reference.Rows[0].NoiseRed);
+            Assert.Equal(2.0 / 3.0, comparison.AverageMeanError);
+            Assert.Equal(0.5, comparison.AverageNoiseError);
+            Assert.Equal(7.0 / 12.0, comparison.CombinedAverageError);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Q13ImcheckNoiseReferenceRejectsWrongRowCount()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"q13-imcheck-reference-short-{Guid.NewGuid():N}.xls");
+        try
+        {
+            File.WriteAllLines(path,
+            [
+                "R\tG\tB\tLum\tnR\tnG\tnB\tnLum\tsnrR\tsnrG\tsnrB\tsnrLum",
+                "2,0000e+002\t 1,0000e+002\t 5,0000e+001\t 0\t 1,5000e+000\t 2,5000e+000\t 3,5000e+000\t 0\t 0\t 0\t 0\t 0"
+            ]);
+
+            var ex = Assert.Throws<InvalidDataException>(() => Q13ImcheckNoiseReference.Load(path));
+            Assert.Contains("Expected 20", ex.Message);
+        }
+        finally
+        {
+            File.Delete(path);
         }
     }
 

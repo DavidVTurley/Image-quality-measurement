@@ -32,7 +32,7 @@ public sealed class Q13Measurer : IImageMeasurer<Q13MeasurementOptions, Q13Measu
         for (var patchIndex = 0; patchIndex < options.PatchCount; patchIndex++)
         {
             var center = sampleCenters[patchIndex];
-            patches.Add(MeasurePatch(image, patchIndex, channels, sampleSize, center.X, center.Y));
+            patches.Add(MeasurePatch(image, patchIndex, channels, sampleSize, center.X, center.Y, options.UseOutlierRejection, options.OutlierSigmaThreshold));
         }
 
         return new Q13MeasurementResult(
@@ -55,6 +55,11 @@ public sealed class Q13Measurer : IImageMeasurer<Q13MeasurementOptions, Q13Measu
         if (options.SampleSize <= 0 || options.SampleSize % 2 == 0)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "Sample size must be a positive odd number.");
+        }
+
+        if (options.OutlierSigmaThreshold <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), "Outlier sigma threshold must be positive.");
         }
 
         if (options.SampleCenters is not null && options.SampleCenters.Count != options.PatchCount)
@@ -119,9 +124,9 @@ public sealed class Q13Measurer : IImageMeasurer<Q13MeasurementOptions, Q13Measu
             .ToArray();
     }
 
-    private static PatchMeasurement MeasurePatch(Mat image, int patchIndex, int channels, int sampleSize, double centerX, double centerY)
+    private static PatchMeasurement MeasurePatch(Mat image, int patchIndex, int channels, int sampleSize, double centerX, double centerY, bool rejectOutliers, double outlierSigmaThreshold)
     {
-        var statistics = PatchSampler.SampleCenteredSquare(image, channels, sampleSize, centerX, centerY);
+        var statistics = PatchSampler.SampleCenteredSquare(image, channels, sampleSize, centerX, centerY, rejectOutliers, outlierSigmaThreshold);
         return CreatePatchMeasurement(patchIndex, statistics);
     }
 
@@ -174,7 +179,7 @@ public sealed class Q13Measurer : IImageMeasurer<Q13MeasurementOptions, Q13Measu
             var rect = MeasurementGeometry.CenteredSquare(stripWidth, stripHeight, sampleSize, centerX, centerY);
             using var roi = new Mat(warped, rect);
             var originalCenter = geometry.PointAt(region.CenterX, region.CenterY);
-            patches.Add(CreatePatchMeasurement(region.PatchIndex, PatchSampler.SampleRgb(roi, channels) with
+            patches.Add(CreatePatchMeasurement(region.PatchIndex, PatchSampler.SampleRgb(roi, channels, options.UseOutlierRejection, options.OutlierSigmaThreshold) with
             {
                 CenterX = originalCenter.X,
                 CenterY = originalCenter.Y,

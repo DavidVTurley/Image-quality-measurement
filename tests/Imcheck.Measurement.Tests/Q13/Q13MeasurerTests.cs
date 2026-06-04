@@ -95,6 +95,43 @@ public sealed class Q13MeasurerTests
     }
 
     [Fact]
+    public void OutlierRejectionRemovesSingleExtremeSamplePixel()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        try
+        {
+            var generated = GenerateQ13(path);
+            var centers = Q13Centers(generated.Width, generated.Height);
+            using (var image = OpenCvSharp.Cv2.ImRead(path, OpenCvSharp.ImreadModes.Unchanged))
+            {
+                var center = centers[0];
+                image.Set((int)Math.Round(center.Y), (int)Math.Round(center.X), new OpenCvSharp.Vec3b(0, 0, 0));
+                OpenCvSharp.Cv2.ImWrite(path, image);
+            }
+
+            var regular = new Q13Measurer().Measure(path, new Q13MeasurementOptions { SampleCenters = centers, SampleSize = 9 });
+            var rejected = new Q13Measurer().Measure(path, new Q13MeasurementOptions
+            {
+                SampleCenters = centers,
+                SampleSize = 9,
+                UseOutlierRejection = true,
+                OutlierSigmaThreshold = 2.0
+            });
+
+            Assert.True(regular.Patches[0].Noise > 0);
+            Assert.Equal(Q13GrayscaleTargetGenerator.Patches[0].EncodedRgb, rejected.Patches[0].Output);
+            Assert.Equal(0, rejected.Patches[0].Noise);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void ResultCsvLoadsExplicitPatchCoordinates()
     {
         var path = Path.GetTempFileName();

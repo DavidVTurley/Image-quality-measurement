@@ -11,4 +11,8 @@ public sealed record Q13MeasurementOptions
     public Q13StripGeometry? StripGeometry { get; init; }
 
     public IReadOnlyList<Q13SampleRegion>? SampleRegions { get; init; }
+
+    public bool UseOutlierRejection { get; init; }
+
+    public double OutlierSigmaThreshold { get; init; } = 3.0;
 }

@@ -96,19 +96,46 @@ internal static class CliCommandRunner
 
     private static async Task<int> ExecuteQ13Async(CliOptions options)
     {
-        var sampleCenters = options.PointsPath is null
-            ? null
-            : Q13SamplePointCsv.Load(options.PointsPath);
-
-        var result = new Q13Measurer().Measure(
-            options.ImagePath!,
-            new Q13MeasurementOptions
+        Q13ImportedSamples? importedSamples = null;
+        IReadOnlyList<Q13SamplePoint>? sampleCenters = null;
+        if (options.PointsPath is not null)
+        {
+            if (Q13ResultSampleCsv.IsResultCsv(options.PointsPath))
             {
-                SampleSize = options.SampleSize,
-                SampleCenters = sampleCenters
-            });
+                importedSamples = Q13ResultSampleCsv.Load(options.PointsPath);
+                sampleCenters = importedSamples.Centers;
+            }
+            else
+            {
+                sampleCenters = Q13SamplePointCsv.Load(options.PointsPath);
+            }
+        }
+
+        Q13MeasurementResult Measure(bool rejectOutliers, double outlierSigmaThreshold)
+        {
+            return new Q13Measurer().Measure(
+                options.ImagePath!,
+                new Q13MeasurementOptions
+                {
+                    SampleSize = options.SampleSizeWasProvided ? options.SampleSize : importedSamples?.SampleSize ?? options.SampleSize,
+                    SampleCenters = sampleCenters,
+                    UseOutlierRejection = rejectOutliers,
+                    OutlierSigmaThreshold = outlierSigmaThreshold
+                });
+        }
+
+        var result = Measure(options.RejectOutliers, options.OutlierSigmaThreshold);
 
         await WriteOptionalOutputsAsync(options, result.ToCsv(), result.ToImcheckText());
+
+        if (options.ImcheckReferencePath is not null)
+        {
+            PrintQ13ImcheckComparison(result, options.ImcheckReferencePath);
+            if (options.FitOutlierSigma)
+            {
+                FitQ13OutlierSigma(Measure, options);
+            }
+        }
 
         if (options.CsvPath is null && options.ImcheckTextPath is null)
         {
@@ -144,11 +171,65 @@ internal static class CliCommandRunner
             await File.WriteAllTextAsync(options.ImcheckTextPath, imcheckText);
         }
 
-        if (options.CsvPath is null && options.ImcheckTextPath is null)
+        if (options.CsvPath is null && options.ImcheckTextPath is null && options.ImcheckReferencePath is null)
         {
             Console.Write(csv);
         }
     }
+
+    private static void PrintQ13ImcheckComparison(Q13MeasurementResult result, string referencePath)
+    {
+        var reference = Q13ImcheckNoiseReference.Load(referencePath);
+        var comparison = reference.Compare(result);
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"ImCheck comparison: avg mean error={comparison.AverageMeanError:0.0000}, avg noise error={comparison.AverageNoiseError:0.0000}, combined={comparison.CombinedAverageError:0.0000}, max={comparison.MaxError:0.0000} at patch {comparison.MaxErrorPatch}"));
+    }
+
+    private static void FitQ13OutlierSigma(Func<bool, double, Q13MeasurementResult> measure, CliOptions options)
+    {
+        var reference = Q13ImcheckNoiseReference.Load(options.ImcheckReferencePath!);
+        Q13ImcheckNoiseComparison? bestComparison = null;
+        var bestRejectOutliers = options.RejectOutliers;
+        var bestOutlierSigma = options.OutlierSigmaThreshold;
+
+        var outlierSettings = options.FitOutlierSigma
+            ? FitOutlierSettings(options)
+            : [new OutlierFitSetting(options.RejectOutliers, options.OutlierSigmaThreshold)];
+
+        foreach (var outlierSetting in outlierSettings)
+        {
+            var comparison = reference.Compare(measure(outlierSetting.RejectOutliers, outlierSetting.SigmaThreshold));
+            if (bestComparison is null || comparison.CombinedAverageError < bestComparison.CombinedAverageError)
+            {
+                bestComparison = comparison;
+                bestRejectOutliers = outlierSetting.RejectOutliers;
+                bestOutlierSigma = outlierSetting.SigmaThreshold;
+            }
+        }
+
+        var rejectionLabel = bestRejectOutliers
+            ? string.Create(CultureInfo.InvariantCulture, $"sigma={bestOutlierSigma:0.###}")
+            : "none";
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Best fitted measurement: outlier rejection={rejectionLabel}, avg mean error={bestComparison!.AverageMeanError:0.0000}, avg noise error={bestComparison.AverageNoiseError:0.0000}, combined={bestComparison.CombinedAverageError:0.0000}, max={bestComparison.MaxError:0.0000} at patch {bestComparison.MaxErrorPatch}"));
+    }
+
+    private static IEnumerable<OutlierFitSetting> FitOutlierSettings(CliOptions options)
+    {
+        yield return new OutlierFitSetting(false, options.OutlierSigmaThreshold);
+        foreach (var sigmaThreshold in FitRangeValues(options.FitSigmaMin, options.FitSigmaMax, options.FitSigmaStep))
+        {
+            yield return new OutlierFitSetting(true, sigmaThreshold);
+        }
+    }
+
+    private static IEnumerable<double> FitRangeValues(double start, double end, double step)
+    {
+        for (var value = start; value <= end + step / 10.0; value += step)
+        {
+            yield return Math.Round(value, 10);
+        }
+    }
+
+    private sealed record OutlierFitSetting(bool RejectOutliers, double SigmaThreshold);
 
     private static void PrintOutputPaths(CliOptions options)
     {

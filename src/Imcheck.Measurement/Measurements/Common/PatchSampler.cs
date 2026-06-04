@@ -9,11 +9,13 @@ internal static class PatchSampler
         int channels,
         int sampleSize,
         double centerX,
-        double centerY)
+        double centerY,
+        bool rejectOutliers = false,
+        double outlierSigmaThreshold = 3.0)
     {
         var rect = MeasurementGeometry.CenteredSquare(image.Width, image.Height, sampleSize, centerX, centerY);
         using var roi = new Mat(image, rect);
-        var statistics = SampleRgb(roi, channels);
+        var statistics = SampleRgb(roi, channels, rejectOutliers, outlierSigmaThreshold);
         return statistics with
         {
             CenterX = centerX,
@@ -24,20 +26,24 @@ internal static class PatchSampler
         };
     }
 
-    public static RgbPatchStatistics SampleRgb(Mat roi, int channels)
+    public static RgbPatchStatistics SampleRgb(
+        Mat roi,
+        int channels,
+        bool rejectOutliers = false,
+        double outlierSigmaThreshold = 3.0)
     {
         if (channels == 1)
         {
-            var (mean, noise) = ImageStatistics.MeanAndPopulationStdDev(roi);
+            var (mean, noise) = MeasureChannel(roi, rejectOutliers, outlierSigmaThreshold);
             return new RgbPatchStatistics(mean, mean, mean, noise, noise, noise, IsColor: false, 0, 0, 0, 0, roi.Width);
         }
 
         Cv2.Split(roi, out var splitChannels);
         try
         {
-            var (blueMean, blueNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[0]);
-            var (greenMean, greenNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[1]);
-            var (redMean, redNoise) = ImageStatistics.MeanAndPopulationStdDev(splitChannels[2]);
+            var (blueMean, blueNoise) = MeasureChannel(splitChannels[0], rejectOutliers, outlierSigmaThreshold);
+            var (greenMean, greenNoise) = MeasureChannel(splitChannels[1], rejectOutliers, outlierSigmaThreshold);
+            var (redMean, redNoise) = MeasureChannel(splitChannels[2], rejectOutliers, outlierSigmaThreshold);
 
             return new RgbPatchStatistics(redMean, greenMean, blueMean, redNoise, greenNoise, blueNoise, IsColor: true, 0, 0, 0, 0, roi.Width);
         }
@@ -48,6 +54,17 @@ internal static class PatchSampler
                 channel.Dispose();
             }
         }
+    }
+
+    private static (double Mean, double Noise) MeasureChannel(Mat channel, bool rejectOutliers, double outlierSigmaThreshold)
+    {
+        if (!rejectOutliers)
+        {
+            return ImageStatistics.MeanAndPopulationStdDev(channel);
+        }
+
+        var clipped = ImageStatistics.MeanAndPopulationStdDevWithSigmaClipping(channel, outlierSigmaThreshold);
+        return (clipped.Mean, clipped.StdDev);
     }
 }
 
